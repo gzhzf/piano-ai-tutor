@@ -144,18 +144,19 @@ function typewriterAppend(text, assistant, animation, userMsg, intent) {
 // ===== 教案漫画按钮 =====
 function appendComicButton(bubble, userMsg) {
     const btnRow = document.createElement("div");
+    btnRow.className = "btn-row";
     btnRow.style.cssText = "margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;";
 
     const comicBtn = document.createElement("button");
     comicBtn.className = "comic-btn";
     comicBtn.textContent = "🎨 漫画教案";
-    comicBtn.addEventListener("click", () => loadComic(userMsg, comicBtn));
+    comicBtn.addEventListener("click", () => loadComic(userMsg, comicBtn, bubble));
 
     const playBtn = document.createElement("button");
     playBtn.className = "comic-btn";
     playBtn.style.background = "#5FC9A8";
     playBtn.textContent = "▶ 演奏动画";
-    playBtn.addEventListener("click", () => loadPlayAnim(userMsg, playBtn));
+    playBtn.addEventListener("click", () => loadPlayAnim(userMsg, playBtn, bubble));
 
     btnRow.appendChild(comicBtn);
     btnRow.appendChild(playBtn);
@@ -163,8 +164,7 @@ function appendComicButton(bubble, userMsg) {
 }
 
 // ===== 加载教案漫画 =====
-async function loadComic(userMsg, btn) {
-    const bubble = btn.parentElement;
+async function loadComic(userMsg, btn, bubble) {
     btn.disabled = true; btn.textContent = "生成中...";
     try {
         const res = await fetch("/api/comic", {
@@ -172,7 +172,10 @@ async function loadComic(userMsg, btn) {
             body: JSON.stringify({ topic: userMsg })
         });
         const data = await res.json();
-        btn.remove();
+        btn.disabled = false; btn.textContent = "🎨 漫画教案";
+        // 移除旧的漫画内容（如有）
+        const oldComic = bubble.querySelector(".comic-strip");
+        if (oldComic) oldComic.remove();
         const comicEl = document.createElement("div");
         comicEl.className = "comic-strip";
         data.panels.forEach((p, idx) => {
@@ -206,15 +209,14 @@ async function loadComic(userMsg, btn) {
 }
 
 // ===== 演奏动画 =====
-async function loadPlayAnim(userMsg, btn) {
-    const bubble = btn.parentElement.parentElement;
+async function loadPlayAnim(userMsg, btn, bubble) {
     btn.disabled = true; btn.textContent = "加载中...";
     try {
         const res = await fetch("/api/play?topic=" + encodeURIComponent(userMsg));
         const data = await res.json();
         btn.disabled = false; btn.textContent = "▶ 演奏动画";
 
-        // 创建演奏动画容器
+        // 移除旧的演奏动画（如有）
         const existing = bubble.querySelector(".play-anim-wrap");
         if (existing) existing.remove();
 
