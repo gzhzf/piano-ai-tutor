@@ -111,32 +111,31 @@ def comic():
     data = request.json
     topic = data.get("topic", "中央C")
 
-    # 角色定义：teacher=老师, student=学生, ai=AI助手
-    # 每格：speaker(说话者) + text(对话内容) + action(场景描述) + expression(表情)
+    # 每格：speaker + text + action + expression + scene_type(场景动画类型)
     comics = {
         "中央C": [
-            {"speaker": "teacher", "text": "同学们，今天我们来认识钢琴上最重要的音——中央C！", "action": "课堂导入", "expression": "smile"},
-            {"speaker": "teacher", "text": "看这里！两个黑键左边第一个白键，就是中央C哦~", "action": "教师示范", "expression": "explain"},
-            {"speaker": "student", "text": "老师我找到了！用大拇指轻轻按一下...叮咚！", "action": "学生弹奏", "expression": "happy"},
-            {"speaker": "ai", "text": "跟灯模式已开启，LED灯会指引你弹对位置~", "action": "AI辅助", "expression": "help"},
-            {"speaker": "ai", "text": "太棒了！准确率95%，中央C弹对了！", "action": "AI反馈", "expression": "praise"},
-            {"speaker": "teacher", "text": "你真棒！「中央C侦探」勋章送给你！", "action": "颁发勋章", "expression": "proud"},
+            {"speaker": "teacher", "text": "同学们，今天我们来认识钢琴上最重要的音——中央C！", "action": "课堂导入", "expression": "smile", "scene": "piano_intro"},
+            {"speaker": "teacher", "text": "看这里！两个黑键左边第一个白键，就是中央C哦~", "action": "教师示范", "expression": "explain", "scene": "find_c"},
+            {"speaker": "student", "text": "老师我找到了！用大拇指轻轻按一下...叮咚！", "action": "学生弹奏", "expression": "happy", "scene": "press_c"},
+            {"speaker": "ai", "text": "跟灯模式已开启，LED灯会指引你弹对位置~", "action": "AI辅助", "expression": "help", "scene": "led_guide"},
+            {"speaker": "ai", "text": "太棒了！准确率95%，中央C弹对了！", "action": "AI反馈", "expression": "praise", "scene": "score_95"},
+            {"speaker": "teacher", "text": "你真棒！「中央C侦探」勋章送给你！", "action": "颁发勋章", "expression": "proud", "scene": "medal"},
         ],
         "巴赫": [
-            {"speaker": "teacher", "text": "今天我们学巴赫G大调小步舞曲，先听一遍感受3/4拍~", "action": "聆听曲目", "expression": "smile"},
-            {"speaker": "student", "text": "老师，右手D5开始弹吗？大拇指起句对吗？", "action": "分手练习", "expression": "think"},
-            {"speaker": "ai", "text": "对的！60BPM慢速跟灯，Visual guide关联五线谱~", "action": "跟灯慢练", "expression": "help"},
-            {"speaker": "student", "text": "装饰音这里有点难...上波音G-A-G总是弹慢", "action": "遇到困难", "expression": "worry"},
-            {"speaker": "ai", "text": "别急！循环练习这个小节10遍，十次法则！", "action": "循环攻坚", "expression": "encourage"},
-            {"speaker": "teacher", "text": "双手合奏很优雅！巴洛克风格满分！", "action": "成果展示", "expression": "proud"},
+            {"speaker": "teacher", "text": "今天我们学巴赫G大调小步舞曲，先听一遍感受3/4拍~", "action": "聆听曲目", "expression": "smile", "scene": "music_34"},
+            {"speaker": "student", "text": "老师，右手D5开始弹吗？大拇指起句对吗？", "action": "分手练习", "expression": "think", "scene": "right_hand"},
+            {"speaker": "ai", "text": "对的！60BPM慢速跟灯，Visual guide关联五线谱~", "action": "跟灯慢练", "expression": "help", "scene": "led_slow"},
+            {"speaker": "student", "text": "装饰音这里有点难...上波音G-A-G总是弹慢", "action": "遇到困难", "expression": "worry", "scene": "ornament"},
+            {"speaker": "ai", "text": "别急！循环练习这个小节10遍，十次法则！", "action": "循环攻坚", "expression": "encourage", "scene": "loop_10"},
+            {"speaker": "teacher", "text": "双手合奏很优雅！巴洛克风格满分！", "action": "成果展示", "expression": "proud", "scene": "both_hands"},
         ],
         "default": [
-            {"speaker": "teacher", "text": "今天我们来学一首新曲子，准备好了吗？", "action": "课堂导入", "expression": "smile"},
-            {"speaker": "student", "text": "准备好了！我先看谱子认识音符~", "action": "识谱", "expression": "think"},
-            {"speaker": "student", "text": "跟灯慢练，一个音一个音弹准...", "action": "跟灯练习", "expression": "focus"},
-            {"speaker": "ai", "text": "检测到2个错音，已高亮标记，注意这里~", "action": "AI纠错", "expression": "help"},
-            {"speaker": "student", "text": "再来一遍！这次准确率98%了！", "action": "再次练习", "expression": "happy"},
-            {"speaker": "teacher", "text": "进步很大！继续加油，下周学新曲子~", "action": "课堂总结", "expression": "proud"},
+            {"speaker": "teacher", "text": "今天我们来学一首新曲子，准备好了吗？", "action": "课堂导入", "expression": "smile", "scene": "piano_intro"},
+            {"speaker": "student", "text": "准备好了！我先看谱子认识音符~", "action": "识谱", "expression": "think", "scene": "read_score"},
+            {"speaker": "student", "text": "跟灯慢练，一个音一个音弹准...", "action": "跟灯练习", "expression": "focus", "scene": "led_guide"},
+            {"speaker": "ai", "text": "检测到2个错音，已高亮标记，注意这里~", "action": "AI纠错", "expression": "help", "scene": "error_mark"},
+            {"speaker": "student", "text": "再来一遍！这次准确率98%了！", "action": "再次练习", "expression": "happy", "scene": "score_98"},
+            {"speaker": "teacher", "text": "进步很大！继续加油，下周学新曲子~", "action": "课堂总结", "expression": "proud", "scene": "medal"},
         ]
     }
 

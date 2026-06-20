@@ -194,8 +194,9 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 .comic-panel-header { display:flex; align-items:center; gap:8px; padding:4px 10px; }
 .comic-panel-num { background:rgba(255,255,255,0.3); color:var(--white); font-size:11px; font-weight:700; padding:1px 7px; border-radius:8px; }
 .comic-action { color:var(--white); font-size:11px; font-weight:600; }
-/* 人物+对话区：人物大图在上，对话在下 */
+/* 人物+对话区：场景动画在上，人物中部，对话底部 */
 .comic-scene-wrap { display:flex; flex-direction:column; align-items:center; padding:10px; background:var(--white); gap:6px; }
+.comic-scene-canvas { width:100%; max-width:240px; height:70px; border-radius:8px; background:#F8F6FF; }
 .comic-char-svg { width:110px; height:128px; flex-shrink:0; }
 /* 对话气泡 */
 .comic-dialogue { position:relative; background:var(--soft-purple); border-radius:12px; padding:8px 14px; width:100%; text-align:center; }

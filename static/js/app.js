@@ -172,6 +172,7 @@ async function loadComic(userMsg, btn) {
                     <span class="comic-action">${p.action}</span>
                 </div>
                 <div class="comic-scene-wrap">
+                    <canvas class="comic-scene-canvas" width="240" height="80" data-scene="${p.scene}"></canvas>
                     ${svgChar(p.speaker, p.expression)}
                     <div class="comic-dialogue">
                         <div class="comic-speaker-name">${speakerName(p.speaker)}</div>
@@ -180,6 +181,9 @@ async function loadComic(userMsg, btn) {
                 </div>
             `;
             comicEl.appendChild(panel);
+            // 渲染场景动画
+            const cv = panel.querySelector(".comic-scene-canvas");
+            setTimeout(() => drawScene(cv, p.scene, idx), 200 + idx * 100);
         });
         bubble.appendChild(comicEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -191,6 +195,334 @@ async function loadComic(userMsg, btn) {
 
 function speakerName(s) {
     return { teacher: "老师", student: "小明", ai: "AI助手" }[s] || s;
+}
+
+// ===== 漫画场景动画 =====
+function drawScene(cv, scene, panelIdx) {
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    let frame = 0;
+
+    // 共用：绘制小钢琴键盘
+    function drawKeys(cx, cy, numWhite, highlightIdx, highlightColor, ledIdx) {
+        const wkW = 18, wkH = 40, bkW = 11, bkH = 22;
+        for (let i = 0; i < numWhite; i++) {
+            const x = cx + i * wkW;
+            ctx.fillStyle = (highlightIdx === i) ? highlightColor : "#FFFFFF";
+            ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
+            ctx.fillRect(x, cy, wkW - 1, wkH); ctx.strokeRect(x, cy, wkW - 1, wkH);
+            // LED灯
+            if (ledIdx === i) {
+                ctx.fillStyle = "#FF6B9D";
+                ctx.beginPath(); ctx.arc(x + wkW/2 - 0.5, cy - 4, 3, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 8; ctx.shadowColor = "#FF6B9D";
+                ctx.fill(); ctx.shadowBlur = 0;
+            }
+        }
+        // 黑键2+3
+        const blackPos = [0.65, 1.65, 3.65, 4.65, 5.65];
+        for (let oct = 0; oct < Math.ceil(numWhite/7); oct++) {
+            for (const off of blackPos) {
+                const idx = oct * 7 + off;
+                if (idx < numWhite - 0.5) {
+                    ctx.fillStyle = "#2D2A4A";
+                    ctx.fillRect(cx + idx * wkW, cy, bkW, bkH);
+                }
+            }
+        }
+    }
+
+    // 共用：绘制音符飘出
+    function drawNote(x, y, alpha) {
+        ctx.fillStyle = `rgba(255,107,157,${alpha})`;
+        ctx.beginPath(); ctx.ellipse(x, y, 6, 5, -0.3, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = `rgba(255,107,157,${alpha})`; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(x + 5, y); ctx.lineTo(x + 5, y - 18); ctx.stroke();
+    }
+
+    const anims = {
+        "piano_intro": () => {
+            // 钢琴键盘从左到右逐个出现
+            ctx.clearRect(0, 0, W, H);
+            const num = Math.min(Math.floor(frame / 3) + 1, 10);
+            drawKeys(30, 20, num, -1, null, -1);
+            if (frame > 30) {
+                ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 11px 微软雅黑"; ctx.textAlign = "center";
+                ctx.fillText("钢琴", W/2, 72);
+            }
+            if (frame < 40) requestAnimationFrame(anims["piano_intro"]);
+        },
+        "find_c": () => {
+            // 高亮2黑键→左边白键
+            ctx.clearRect(0, 0, W, H);
+            const phase = Math.floor(frame / 25);
+            const hl2bk = phase >= 1 ? "#FFB84D" : null;
+            const hlC = phase >= 2 ? "#FF6B9D" : null;
+            // 画7个白键
+            const wkW = 24, wkH = 42, cx = 36, cy = 20;
+            for (let i = 0; i < 7; i++) {
+                ctx.fillStyle = (hlC && i === 2) ? "#FF6B9D" : "#FFFFFF";
+                ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
+                ctx.fillRect(cx + i * wkW, cy, wkW - 1, wkH); ctx.strokeRect(cx + i * wkW, cy, wkW - 1, wkH);
+            }
+            // 黑键
+            const bks = [{x:0.65,c:hl2bk},{x:1.65,c:hl2bk},{x:3.65,c:null},{x:4.65,c:null},{x:5.65,c:null}];
+            bks.forEach(b => {
+                ctx.fillStyle = b.c || "#2D2A4A";
+                ctx.fillRect(cx + b.x * wkW, cy, 14, 22);
+            });
+            // 标注
+            if (phase >= 1) { ctx.fillStyle = "#FFB84D"; ctx.font = "bold 9px 微软雅黑"; ctx.textAlign = "center"; ctx.fillText("2黑键", cx + 1.6*wkW, 14); }
+            if (phase >= 2) {
+                ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 10px 微软雅黑";
+                ctx.fillText("C", cx + 2*wkW + 11, cy + wkH + 12);
+                if (frame % 50 < 25) { ctx.fillStyle = "rgba(255,107,157,0.3)"; ctx.fillRect(cx + 2*wkW, cy, wkW-1, wkH); }
+            }
+            if (frame < 100) requestAnimationFrame(anims["find_c"]);
+        },
+        "press_c": () => {
+            // 按下中央C+音符飘出+声音
+            ctx.clearRect(0, 0, W, H);
+            const cx = 36, cy = 20, wkW = 24, wkH = 42;
+            for (let i = 0; i < 7; i++) {
+                ctx.fillStyle = (i === 2) ? "#FF6B9D" : "#FFFFFF";
+                ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
+                ctx.fillRect(cx + i * wkW, cy, wkW - 1, wkH); ctx.strokeRect(cx + i * wkW, cy, wkW - 1, wkH);
+            }
+            // 手指圆点
+            const pressY = cy + 5 + (frame % 20 < 10 ? 3 : 0);
+            ctx.fillStyle = "#FFE0C0"; ctx.strokeStyle = "#333"; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(cx + 2*wkW + 11, pressY, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            // 音符飘出
+            const noteAlpha = Math.max(0, 1 - (frame % 40) / 40);
+            const noteY = 15 - (frame % 40) * 0.8;
+            if (frame % 40 < 30) drawNote(cx + 2*wkW + 11, noteY, noteAlpha);
+            // 首次播放C音
+            if (frame === 5) playNote(NOTE_FREQ["C4"], 0.5, 0.3);
+            if (frame % 40 === 5 && frame > 10) playNote(NOTE_FREQ["C4"], 0.3, 0.2);
+            ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 10px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("叮咚~", W/2, 72);
+            if (frame < 120) requestAnimationFrame(anims["press_c"]);
+        },
+        "led_guide": () => {
+            // LED灯依次点亮引导
+            ctx.clearRect(0, 0, W, H);
+            const cx = 30, cy = 22, wkW = 18, wkH = 38;
+            const led = Math.floor(frame / 12) % 7;
+            drawKeys(cx, cy, 7, -1, null, led);
+            ctx.fillStyle = "#4FC3F7"; ctx.font = "bold 9px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("LED跟灯指引", W/2, 72);
+            if (frame < 120) requestAnimationFrame(anims["led_guide"]);
+        },
+        "score_95": () => {
+            // 准确率95%圆环
+            ctx.clearRect(0, 0, W, H);
+            const cx = W/2, cy = H/2, r = 25;
+            const progress = Math.min(frame / 50, 1) * 0.95;
+            ctx.strokeStyle = "#E8E5F5"; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = "#5FC9A8"; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + progress * Math.PI*2); ctx.stroke();
+            ctx.fillStyle = "#5FC9A8"; ctx.font = "bold 16px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("95%", cx, cy + 5);
+            if (frame > 50) { ctx.font = "10px 微软雅黑"; ctx.fillStyle = "#6B688A"; ctx.fillText("准确率", cx, cy + 22); }
+            if (frame < 80) requestAnimationFrame(anims["score_95"]);
+        },
+        "score_98": () => {
+            ctx.clearRect(0, 0, W, H);
+            const cx = W/2, cy = H/2, r = 25;
+            const progress = Math.min(frame / 50, 1) * 0.98;
+            ctx.strokeStyle = "#E8E5F5"; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = "#5FC9A8"; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + progress * Math.PI*2); ctx.stroke();
+            ctx.fillStyle = "#5FC9A8"; ctx.font = "bold 16px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("98%", cx, cy + 5);
+            if (frame > 50) { ctx.font = "10px 微软雅黑"; ctx.fillStyle = "#6B688A"; ctx.fillText("准确率", cx, cy + 22); }
+            if (frame < 80) requestAnimationFrame(anims["score_98"]);
+        },
+        "medal": () => {
+            // 勋章从天而降+闪光
+            ctx.clearRect(0, 0, W, H);
+            const dropY = Math.min(frame * 1.5, 40);
+            const cx = W/2;
+            // 勋章
+            ctx.fillStyle = "#FFB84D"; ctx.strokeStyle = "#E55500"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(cx, dropY + 10, 16, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            // 勋章内星
+            ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 16px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("★", cx, dropY + 16);
+            // 飘带
+            ctx.fillStyle = "#FF6B9D";
+            ctx.beginPath(); ctx.moveTo(cx - 12, dropY + 22); ctx.lineTo(cx - 18, dropY + 40); ctx.lineTo(cx - 8, dropY + 40); ctx.lineTo(cx - 2, dropY + 26); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(cx + 12, dropY + 22); ctx.lineTo(cx + 18, dropY + 40); ctx.lineTo(cx + 8, dropY + 40); ctx.lineTo(cx + 2, dropY + 26); ctx.fill();
+            // 闪光
+            if (frame > 30 && frame % 20 < 10) {
+                ctx.fillStyle = "rgba(255,184,77,0.4)";
+                ctx.beginPath(); ctx.arc(cx, dropY + 10, 22, 0, Math.PI*2); ctx.fill();
+            }
+            if (frame === 30) playNote(NOTE_FREQ["C5"], 0.3, 0.2);
+            if (frame < 100) requestAnimationFrame(anims["medal"]);
+        },
+        "music_34": () => {
+            // 3/4拍节奏球
+            ctx.clearRect(0, 0, W, H);
+            const beat = Math.floor(frame / 20) % 3;
+            const labels = ["强", "弱", "弱"];
+            const colors = ["#FF6B9D", "#FFB84D", "#FFB84D"];
+            for (let i = 0; i < 3; i++) {
+                const bx = W/2 - 30 + i * 30;
+                const lit = i === beat && frame % 20 < 12;
+                ctx.fillStyle = lit ? colors[i] : "#E8E5F5";
+                ctx.beginPath(); ctx.arc(bx, H/2, lit ? 12 : 8, 0, Math.PI*2); ctx.fill();
+                if (lit) { ctx.fillStyle = "#FFFFFF"; ctx.font = "bold 10px 微软雅黑"; ctx.textAlign = "center"; ctx.fillText(labels[i], bx, H/2 + 4); }
+            }
+            ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 11px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("3/4拍", W/2, 12);
+            if (frame % 20 === 0) playClap(beat === 0 ? 0.25 : 0.12);
+            if (frame < 120) requestAnimationFrame(anims["music_34"]);
+        },
+        "right_hand": () => {
+            // 右手5指在键盘上
+            ctx.clearRect(0, 0, W, H);
+            const cx = 36, cy = 20, wkW = 22, wkH = 40;
+            for (let i = 0; i < 7; i++) {
+                ctx.fillStyle = "#FFFFFF"; ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
+                ctx.fillRect(cx + i * wkW, cy, wkW - 1, wkH); ctx.strokeRect(cx + i * wkW, cy, wkW - 1, wkH);
+            }
+            // 右手5指
+            const fingerColors = ["#FF6B9D","#FFB84D","#5FC9A8","#4FC3F7","#4A3F8E"];
+            const active = Math.floor(frame / 15) % 5;
+            for (let i = 0; i < 5; i++) {
+                const fx = cx + i * wkW + wkW/2;
+                const fy = cy + 8 + (i === active ? 5 : 0);
+                ctx.fillStyle = fingerColors[i];
+                ctx.beginPath(); ctx.arc(fx, fy, 5, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = "#4FC3F7"; ctx.font = "bold 10px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("右手5指", W/2, 72);
+            if (frame < 100) requestAnimationFrame(anims["right_hand"]);
+        },
+        "led_slow": () => {
+            // 60BPM慢速跟灯
+            ctx.clearRect(0, 0, W, H);
+            const cx = 30, cy = 22, wkW = 18, wkH = 36;
+            const led = Math.floor(frame / 30) % 7; // 慢速
+            drawKeys(cx, cy, 7, led, "#4FC3F7", led);
+            ctx.fillStyle = "#4FC3F7"; ctx.font = "bold 10px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("60 BPM 慢速", W/2, 72);
+            if (frame % 30 === 0) playNote(NOTE_FREQ["C4"], 0.4, 0.15);
+            if (frame < 150) requestAnimationFrame(anims["led_slow"]);
+        },
+        "ornament": () => {
+            // 装饰音G-A-G波形
+            ctx.clearRect(0, 0, W, H);
+            const notes = ["G4","A4","G4"];
+            const active = Math.floor(frame / 15) % 3;
+            const cx = W/2 - 50;
+            // 三连音
+            for (let i = 0; i < 3; i++) {
+                const x = cx + i * 40;
+                const y = H/2 + (i === 1 ? -15 : 0); // 中间高
+                ctx.fillStyle = i === active ? "#FF6B9D" : "#E8E5F5";
+                ctx.beginPath(); ctx.ellipse(x, y, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = i === active ? "#FF6B9D" : "#CCCCDD"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(x + 7, y); ctx.lineTo(x + 7, y - 20); ctx.stroke();
+            }
+            // 连线
+            ctx.strokeStyle = "#FF6B9D"; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(cx + 8, H/2); ctx.lineTo(cx + 40, H/2 - 15); ctx.lineTo(cx + 72, H/2); ctx.stroke();
+            ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 10px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("G-A-G 波音", W/2, 72);
+            if (frame % 15 === 0) playNote(NOTE_FREQ[notes[active]], 0.15, 0.2);
+            if (frame < 120) requestAnimationFrame(anims["ornament"]);
+        },
+        "loop_10": () => {
+            // 循环10次计数
+            ctx.clearRect(0, 0, W, H);
+            const count = Math.min(Math.floor(frame / 12) + 1, 10);
+            // 循环箭头
+            const cx = W/2, cy = H/2 - 5;
+            ctx.strokeStyle = "#5FC9A8"; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 1.7); ctx.stroke();
+            // 箭头头
+            ctx.fillStyle = "#5FC9A8";
+            ctx.beginPath(); ctx.moveTo(cx + 18, cy + 8); ctx.lineTo(cx + 24, cy); ctx.lineTo(cx + 14, cy); ctx.fill();
+            // 数字
+            ctx.fillStyle = "#5FC9A8"; ctx.font = "bold 18px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText(count, cx, cy + 6);
+            ctx.font = "9px 微软雅黑"; ctx.fillStyle = "#6B688A";
+            ctx.fillText("/10", cx, cy + 22);
+            if (count === 10) { ctx.fillStyle = "#5FC9A8"; ctx.font = "bold 10px 微软雅黑"; ctx.fillText("完美!", cx, 72); }
+            if (frame % 12 === 0 && count <= 10) playClap(0.15);
+            if (frame < 140) requestAnimationFrame(anims["loop_10"]);
+        },
+        "both_hands": () => {
+            // 双手在键盘上
+            ctx.clearRect(0, 0, W, H);
+            const cx = 30, cy = 20, wkW = 18, wkH = 38;
+            drawKeys(cx, cy, 8, -1, null, -1);
+            // 左手(蓝)+右手(粉)
+            const beat = Math.floor(frame / 15) % 4;
+            for (let i = 0; i < 4; i++) {
+                const fx = cx + (i + 0.5) * wkW;
+                const lit = i === beat % 4;
+                ctx.fillStyle = "#4FC3F7";
+                ctx.beginPath(); ctx.arc(fx, cy + 8 + (lit ? 4 : 0), 4, 0, Math.PI*2); ctx.fill();
+            }
+            for (let i = 0; i < 4; i++) {
+                const fx = cx + (i + 4.5) * wkW;
+                const lit = i === beat % 4;
+                ctx.fillStyle = "#FF6B9D";
+                ctx.beginPath(); ctx.arc(fx, cy + 8 + (lit ? 4 : 0), 4, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 9px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("双手合奏", W/2, 72);
+            if (frame < 100) requestAnimationFrame(anims["both_hands"]);
+        },
+        "read_score": () => {
+            // 五线谱+音符
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = "#6B688A"; ctx.lineWidth = 1;
+            for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(20, 20 + i * 10); ctx.lineTo(W - 20, 20 + i * 10); ctx.stroke(); }
+            // 音符逐个出现
+            const num = Math.min(Math.floor(frame / 15) + 1, 5);
+            for (let i = 0; i < num; i++) {
+                const x = 35 + i * 38;
+                const y = 30 + (i % 3) * 10;
+                ctx.fillStyle = "#FF6B9D";
+                ctx.beginPath(); ctx.ellipse(x, y, 5, 4, -0.3, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "#FF6B9D"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(x + 4, y); ctx.lineTo(x + 4, y - 15); ctx.stroke();
+            }
+            ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 9px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("识谱中...", W/2, 72);
+            if (frame < 90) requestAnimationFrame(anims["read_score"]);
+        },
+        "error_mark": () => {
+            // 错音高亮标记
+            ctx.clearRect(0, 0, W, H);
+            const cx = 36, cy = 20, wkW = 22, wkH = 40;
+            for (let i = 0; i < 7; i++) {
+                const isError = (i === 3 || i === 5);
+                ctx.fillStyle = isError ? "#FF4444" : "#FFFFFF";
+                ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
+                ctx.fillRect(cx + i * wkW, cy, wkW - 1, wkH); ctx.strokeRect(cx + i * wkW, cy, wkW - 1, wkH);
+                if (isError && frame % 30 < 15) {
+                    ctx.strokeStyle = "#FF4444"; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(cx + i * wkW + 2, cy + 2); ctx.lineTo(cx + (i+1) * wkW - 3, cy + wkH - 2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(cx + (i+1) * wkW - 3, cy + 2); ctx.lineTo(cx + i * wkW + 2, cy + wkH - 2); ctx.stroke();
+                }
+            }
+            ctx.fillStyle = "#FF4444"; ctx.font = "bold 10px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("2个错音已标记", W/2, 72);
+            if (frame < 90) requestAnimationFrame(anims["error_mark"]);
+        },
+    };
+
+    const fn = anims[scene] || anims["piano_intro"];
+    fn();
+    frame = 0; // reset for closure
 }
 
 // SVG卡通人物（大图+动作）
