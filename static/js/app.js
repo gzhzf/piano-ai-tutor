@@ -3,6 +3,321 @@ let currentRole = "teacher";
 let isTyping = false;
 
 const chatMessages = document.getElementById("chatMessages");
+
+// ===== 欢迎页钢琴动画 =====
+function initWelcomeAnim() {
+    const cv = document.getElementById("welcomeCanvas");
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+
+    // 星星
+    const stars = [];
+    for (let i = 0; i < 60; i++) {
+        stars.push({
+            x: Math.random() * W, y: Math.random() * H * 0.5,
+            r: Math.random() * 1.5 + 0.3,
+            twinkle: Math.random() * Math.PI * 2,
+            speed: Math.random() * 0.03 + 0.01
+        });
+    }
+
+    // 音符粒子（从钢琴飘起）
+    const particles = [];
+    const noteSymbols = ["♪","♫","♩","♬","♭","♯"];
+
+    // 音波涟漪
+    const ripples = [];
+
+    // 钢琴键参数
+    const pianoX = 60, pianoY = 230, pianoW = 360, pianoH = 50;
+    const wkW = 22; // 白键宽
+    const numWhite = 16;
+    const bkW = 14, bkH = 28;
+
+    // 触键序列（模拟旋律）
+    const melody = [
+        {key:5, hand:"R", note:"C4"}, {key:7, hand:"R", note:"D4"}, {key:9, hand:"R", note:"E4"},
+        {key:11, hand:"R", note:"F4"}, {key:13, hand:"R", note:"G4"},
+        {key:11, hand:"R", note:"F4"}, {key:9, hand:"R", note:"E4"}, {key:7, hand:"R", note:"D4"},
+        {key:5, hand:"R", note:"C4"}, {key:5, hand:"L", note:"C3"},
+    ];
+    let melodyIdx = 0;
+    let lastBeat = 0;
+    const beatInterval = 25; // 帧数
+
+    let frame = 0;
+    let swayPhase = 0;
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // === 1. 背景渐变 ===
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, "#1a1535");
+        grad.addColorStop(0.4, "#2a2050");
+        grad.addColorStop(0.7, "#3a2a60");
+        grad.addColorStop(1, "#4a3a70");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        // === 2. 星星 ===
+        stars.forEach(s => {
+            s.twinkle += s.speed;
+            const alpha = 0.3 + 0.6 * Math.abs(Math.sin(s.twinkle));
+            ctx.fillStyle = `rgba(255,255,220,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+            // 大星星加十字光芒
+            if (s.r > 1.2) {
+                ctx.strokeStyle = `rgba(255,255,220,${alpha * 0.5})`;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(s.x - s.r * 3, s.y); ctx.lineTo(s.x + s.r * 3, s.y);
+                ctx.moveTo(s.x, s.y - s.r * 3); ctx.lineTo(s.x, s.y + s.r * 3);
+                ctx.stroke();
+            }
+        });
+
+        // === 3. 月光 ===
+        const moonX = W - 70, moonY = 55;
+        const moonGrad = ctx.createRadialGradient(moonX, moonY, 5, moonX, moonY, 40);
+        moonGrad.addColorStop(0, "rgba(255,250,200,0.8)");
+        moonGrad.addColorStop(0.5, "rgba(255,240,180,0.2)");
+        moonGrad.addColorStop(1, "rgba(255,240,180,0)");
+        ctx.fillStyle = moonGrad;
+        ctx.fillRect(moonX - 50, moonY - 50, 100, 100);
+        ctx.fillStyle = "rgba(255,250,220,0.9)";
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === 4. 音波涟漪 ===
+        for (let i = ripples.length - 1; i >= 0; i--) {
+            const r = ripples[i];
+            r.radius += 2;
+            r.alpha -= 0.02;
+            if (r.alpha <= 0) { ripples.splice(i, 1); continue; }
+            ctx.strokeStyle = `rgba(255,107,157,${r.alpha})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // === 5. 钢琴 ===
+        // 钢琴体（三角钢琴侧面）
+        ctx.fillStyle = "#1a0a1a";
+        ctx.beginPath();
+        ctx.moveTo(pianoX, pianoY + pianoH);
+        ctx.lineTo(pianoX + pianoW, pianoY + pianoH);
+        ctx.lineTo(pianoX + pianoW - 10, pianoY);
+        ctx.lineTo(pianoX + 30, pianoY);
+        ctx.lineTo(pianoX, pianoY + 20);
+        ctx.closePath();
+        ctx.fill();
+        // 钢琴顶面光泽
+        const pianoGrad = ctx.createLinearGradient(pianoX, pianoY, pianoX, pianoY + 20);
+        pianoGrad.addColorStop(0, "rgba(100,60,120,0.4)");
+        pianoGrad.addColorStop(1, "rgba(40,20,50,0)");
+        ctx.fillStyle = pianoGrad;
+        ctx.fillRect(pianoX + 30, pianoY, pianoW - 40, 20);
+
+        // 琴键
+        const keyY = pianoY + 20;
+        // 白键
+        for (let i = 0; i < numWhite; i++) {
+            const kx = pianoX + 30 + i * wkW;
+            const isActive = melodyIdx > 0 && melody[melodyIdx - 1].key === i && frame - lastBeat < 10;
+            ctx.fillStyle = isActive ? "#FFB84D" : "#F5F0F0";
+            ctx.fillRect(kx, keyY, wkW - 1, pianoH - 20);
+            ctx.strokeStyle = "#888"; ctx.lineWidth = 0.5;
+            ctx.strokeRect(kx, keyY, wkW - 1, pianoH - 20);
+        }
+        // 黑键
+        const blackPattern = [0,1,3,4,5]; // 每八度黑键位置
+        for (let oct = 0; oct < 3; oct++) {
+            for (const bp of blackPattern) {
+                const idx = oct * 7 + bp;
+                if (idx < numWhite - 1) {
+                    const kx = pianoX + 30 + idx * wkW + wkW * 0.65;
+                    ctx.fillStyle = "#1a1a1a";
+                    ctx.fillRect(kx, keyY, bkW, bkH);
+                }
+            }
+        }
+
+        // === 6. 人物（克劳德风格少年侧坐弹琴）===
+        swayPhase += 0.04;
+        const sway = Math.sin(swayPhase) * 3;
+        const charX = pianoX + 80;
+        const charY = pianoY - 90 + sway;
+
+        // 琴凳
+        ctx.fillStyle = "#2a1a2a";
+        ctx.fillRect(charX - 10, pianoY + pianoH - 5, 50, 12);
+
+        // 长外套（深色）
+        ctx.fillStyle = "#2a1a3a";
+        ctx.beginPath();
+        ctx.moveTo(charX - 5, charY + 40);
+        ctx.quadraticCurveTo(charX - 15, charY + 60, charX - 20, charY + 95 + sway);
+        ctx.lineTo(charX + 35, charY + 95 + sway);
+        ctx.quadraticCurveTo(charX + 30, charY + 60, charX + 25, charY + 40);
+        ctx.closePath();
+        ctx.fill();
+        // 外套光泽
+        ctx.strokeStyle = "rgba(100,80,140,0.3)"; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(charX + 10, charY + 42);
+        ctx.quadraticCurveTo(charX + 8, charY + 65, charX + 5, charY + 90 + sway);
+        ctx.stroke();
+
+        // 身体
+        ctx.fillStyle = "#1a1028";
+        ctx.beginPath();
+        ctx.ellipse(charX + 10, charY + 35, 18, 25, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 脖子
+        ctx.fillStyle = "#E8C8A8";
+        ctx.fillRect(charX + 6, charY + 12, 8, 8);
+
+        // 头部
+        ctx.fillStyle = "#F0D0B0";
+        ctx.beginPath();
+        ctx.arc(charX + 10, charY, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 头发（银色尖刺，克劳德风格）
+        ctx.fillStyle = "#D0D8E8";
+        // 后面头发
+        ctx.beginPath();
+        ctx.arc(charX + 10, charY - 2, 14, Math.PI, Math.PI * 2);
+        ctx.fill();
+        // 尖刺
+        const spikes = [
+            {x:-12,y:-8,l:14,a:-0.3}, {x:-8,y:-12,l:16,a:-0.1},
+            {x:-3,y:-14,l:18,a:0.1}, {x:3,y:-14,l:16,a:-0.1},
+            {x:8,y:-12,l:14,a:0.2}, {x:12,y:-8,l:12,a:0.4},
+        ];
+        spikes.forEach(sp => {
+            ctx.beginPath();
+            ctx.moveTo(charX + 10 + sp.x, charY + sp.y);
+            ctx.lineTo(charX + 10 + sp.x + Math.cos(sp.a) * sp.l, charY + sp.y - Math.sin(Math.abs(sp.a)) * sp.l);
+            ctx.lineTo(charX + 10 + sp.x + 4, charY + sp.y + 2);
+            ctx.closePath();
+            ctx.fill();
+        });
+        // 头发高光
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.beginPath();
+        ctx.arc(charX + 6, charY - 8, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 脸部细节（侧面）
+        ctx.fillStyle = "#D8A888";
+        // 鼻子
+        ctx.beginPath();
+        ctx.moveTo(charX + 22, charY);
+        ctx.lineTo(charX + 25, charY + 3);
+        ctx.lineTo(charX + 22, charY + 5);
+        ctx.fill();
+        // 眼睛（闭眼专注）
+        ctx.strokeStyle = "#4A3F8E"; ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(charX + 16, charY - 1, 2, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+        // 嘴
+        ctx.strokeStyle = "#A05555"; ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(charX + 18, charY + 6);
+        ctx.lineTo(charX + 21, charY + 6);
+        ctx.stroke();
+
+        // 手臂→伸向琴键
+        const armEndX = pianoX + 30 + (melodyIdx > 0 ? melody[melodyIdx % melody.length].key * wkW : 5 * wkW);
+        const armEndY = keyY + 5;
+        // 左臂
+        ctx.strokeStyle = "#2a1a3a"; ctx.lineWidth = 6; ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(charX - 2, charY + 38);
+        ctx.quadraticCurveTo(charX + 10, charY + 55, armEndX, armEndY);
+        ctx.stroke();
+        // 右臂
+        ctx.beginPath();
+        ctx.moveTo(charX + 22, charY + 38);
+        ctx.quadraticCurveTo(charX + 35, charY + 55, armEndX + 20, armEndY);
+        ctx.stroke();
+        // 手部
+        ctx.fillStyle = "#E8C8A8";
+        ctx.beginPath(); ctx.arc(armEndX, armEndY, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(armEndX + 20, armEndY, 4, 0, Math.PI * 2); ctx.fill();
+
+        // === 7. 触键判定+特效 ===
+        if (frame - lastBeat >= beatInterval) {
+            lastBeat = frame;
+            const note = melody[melodyIdx % melody.length];
+            const kx = pianoX + 30 + note.key * wkW + wkW / 2;
+            const ky = keyY;
+
+            // 音波涟漪
+            ripples.push({ x: kx, y: ky, radius: 5, alpha: 0.6 });
+
+            // 光芒迸发
+            ctx.save();
+            ctx.translate(kx, ky);
+            const beamGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 30);
+            beamGrad.addColorStop(0, "rgba(255,200,100,0.6)");
+            beamGrad.addColorStop(1, "rgba(255,200,100,0)");
+            ctx.fillStyle = beamGrad;
+            ctx.fillRect(-30, -30, 60, 60);
+            ctx.restore();
+
+            // 音符粒子
+            particles.push({
+                x: kx, y: ky - 10,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: -Math.random() * 2 - 1,
+                life: 1, symbol: noteSymbols[Math.floor(Math.random() * noteSymbols.length)],
+                size: Math.random() * 6 + 10, color: ["#FF6B9D","#FFB84D","#5FC9A8","#4FC3F7"][Math.floor(Math.random()*4)]
+            });
+
+            // 播放钢琴音
+            playNote(NOTE_FREQ[note.note] || 261.63, 0.5, 0.15);
+
+            melodyIdx++;
+        }
+
+        // === 8. 音符粒子（飘向天空）===
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy *= 0.99;
+            p.life -= 0.008;
+            if (p.life <= 0) { particles.splice(i, 1); continue; }
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life;
+            ctx.font = `${p.size}px 微软雅黑`;
+            ctx.textAlign = "center";
+            ctx.fillText(p.symbol, p.x, p.y);
+            ctx.globalAlpha = 1;
+        }
+
+        // === 9. 地面反光 ===
+        const reflGrad = ctx.createLinearGradient(0, pianoY + pianoH, 0, H);
+        reflGrad.addColorStop(0, "rgba(74,63,142,0.2)");
+        reflGrad.addColorStop(1, "rgba(74,63,142,0)");
+        ctx.fillStyle = reflGrad;
+        ctx.fillRect(0, pianoY + pianoH, W, H - pianoY - pianoH);
+
+        frame++;
+        requestAnimationFrame(draw);
+    }
+    draw();
+}
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 const quickQuestions = document.getElementById("quickQuestions");
@@ -1363,6 +1678,7 @@ document.getElementById("libSearch").addEventListener("input", (e) => {
 loadQuickQuestions();
 loadLibrary();
 initDashboard();
+initWelcomeAnim();
 
 // ===== 学情驾驶舱 =====
 let dashStudents = [];
