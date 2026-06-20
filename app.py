@@ -7,41 +7,116 @@ from flask import Flask, render_template, request, jsonify
 from engine.matcher import generate_response, get_quick_questions, get_workflow_steps
 from engine.knowledge_base import get_all_knowledge
 from engine.repertoire import ALL_REPERTOIRE, LEVEL_INDEX, get_repertoire_by_level, search_repertoire
+import hashlib, random
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
-# ============ 学情驾驶舱数据 ============
-DASHBOARD_DATA = {
-    "student": {
-        "name": "学生A",
-        "grade": "一年级",
-        "week": "第4周",
-        "piece": "巴赫《G大调小步舞曲》",
-        "rating": "B+"
-    },
-    "metrics": {
-        "rhythm_accuracy": 82,
-        "pitch_accuracy": 89,
-        "hand_posture": 91,
-        "error_rate": 11,
-        "practice_minutes": 128
-    },
-    "charts": {
-        "rhythm": "/static/img/charts/d_rhythm.png",
-        "pitch": "/static/img/charts/d_pitch.png",
-        "hand": "/static/img/charts/d_hand.png",
-        "errors": "/static/img/charts/b_errors.png",
-        "minutes": "/static/img/charts/b_minutes.png",
-        "radar": "/static/img/charts/r_focus.png"
-    },
-    "diagnosis": [
-        {"type": "warn", "text": "节奏准确率82%，低于目标值90%"},
-        {"type": "warn", "text": "错音率11%，集中在四分音符长音"},
-        {"type": "good", "text": "手型规范度良好，保持现有训练"},
-        {"type": "suggest", "text": "建议：加强四分音符专项节奏训练"},
-        {"type": "suggest", "text": "建议：增加跟灯模式循环练习5分钟"}
-    ]
-}
+# ============ 学生数据 ============
+STUDENTS = [
+    {"id": "s1", "name": "小明", "level": "初级", "avatar": "🧒"},
+    {"id": "s2", "name": "小红", "level": "中级", "avatar": "👧"},
+    {"id": "s3", "name": "小华", "level": "进阶", "avatar": "👦"},
+]
+
+# ============ 动态数据生成 ============
+def generate_dashboard_data(student_id, piece_name):
+    """根据学生+曲目生成动态学情数据"""
+    student = next((s for s in STUDENTS if s["id"] == student_id), STUDENTS[0])
+
+    # 用学生ID+曲目名做种子，确保同一组合数据一致
+    seed_str = f"{student_id}_{piece_name}"
+    seed = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+
+    # 学生水平基准
+    level_base = {"初级": (70, 85), "中级": (80, 92), "进阶": (88, 97)}
+    base_low, base_high = level_base.get(student["level"], (75, 88))
+
+    # 曲目难度系数（越难分数越低）
+    piece_info = None
+    for name, info in ALL_REPERTOIRE.items():
+        if name in piece_name or piece_name in name:
+            piece_info = info; break
+    difficulty_mod = 0
+    if piece_info:
+        diff = piece_info.get("难度", "")
+        if "3级" in diff: difficulty_mod = -8
+        elif "2级" in diff: difficulty_mod = -4
+        elif "1级" in diff: difficulty_mod = -2
+        elif "零基础" in diff: difficulty_mod = 2
+
+    # 生成各项指标
+    rhythm = max(50, min(99, rng.randint(base_low, base_high) + difficulty_mod))
+    pitch = max(50, min(99, rng.randint(base_low, base_high) + difficulty_mod + 2))
+    hand = max(50, min(99, rng.randint(base_low + 5, base_high + 3) + difficulty_mod // 2))
+    completion = max(50, min(99, rng.randint(base_low - 5, base_high - 3) + difficulty_mod))
+    error_rate = max(1, 100 - pitch - rng.randint(0, 8))
+    practice_min = rng.randint(80, 180)
+
+    # 自动评分：节奏40%+音准30%+手型20%+完成度10%
+    score = rhythm * 0.4 + pitch * 0.3 + hand * 0.2 + completion * 0.1
+    if score >= 90: rating, grade_color = "A", "#5FC9A8"
+    elif score >= 80: rating, grade_color = "B+", "#4FC3F7"
+    elif score >= 70: rating, grade_color = "B", "#FFB84D"
+    elif score >= 60: rating, grade_color = "C", "#FF6B9D"
+    else: rating, grade_color = "D", "#FF4444"
+
+    # AI动态诊断
+    diagnosis = []
+    if rhythm < 85:
+        diagnosis.append({"type": "warn", "text": f"节奏准确率{rhythm}%，低于目标值90%"})
+    else:
+        diagnosis.append({"type": "good", "text": f"节奏准确率{rhythm}%，表现稳定"})
+    if error_rate > 10:
+        diagnosis.append({"type": "warn", "text": f"错音率{error_rate}%，需加强音准练习"})
+    else:
+        diagnosis.append({"type": "good", "text": f"错音率{error_rate}%，控制良好"})
+    if hand >= 88:
+        diagnosis.append({"type": "good", "text": "手型规范度良好，保持现有训练"})
+    else:
+        diagnosis.append({"type": "warn", "text": f"手型规范度{hand}%，注意掌关节撑起"})
+
+    # 曲目针对性建议
+    if piece_info:
+        teaching_points = piece_info.get("教学要点", [])
+        if teaching_points:
+            diagnosis.append({"type": "suggest", "text": f"建议：重点练习「{teaching_points[0][:15]}」"})
+        if len(teaching_points) > 1:
+            diagnosis.append({"type": "suggest", "text": f"建议：{teaching_points[1][:20]}"})
+    else:
+        diagnosis.append({"type": "suggest", "text": "建议：慢速练习，确保每个音准确"})
+        diagnosis.append({"type": "suggest", "text": "建议：使用跟灯模式辅助练习"})
+
+    # 四周趋势数据（错音率下降）
+    error_trend = [error_rate + 10, error_rate + 6, error_rate + 3, error_rate]
+
+    # 本周练习时长（7天）
+    practice_week = [rng.randint(10, 30) for _ in range(7)]
+    practice_week[3] = 0  # 周四休息
+
+    return {
+        "student": {
+            "id": student["id"], "name": student["name"],
+            "level": student["level"], "avatar": student["avatar"],
+            "piece": piece_name, "rating": rating,
+            "grade_color": grade_color, "score": round(score, 1)
+        },
+        "metrics": {
+            "rhythm": rhythm, "pitch": pitch, "hand": hand,
+            "completion": completion, "error_rate": error_rate,
+            "practice_minutes": practice_min,
+            "error_trend": error_trend,
+            "practice_week": practice_week
+        },
+        "score_detail": {
+            "rhythm_weight": "40%", "pitch_weight": "30%",
+            "hand_weight": "20%", "completion_weight": "10%",
+            "rhythm_score": rhythm, "pitch_score": pitch,
+            "hand_score": hand, "completion_score": completion,
+            "total_score": round(score, 1)
+        },
+        "diagnosis": diagnosis
+    }
 
 # ============ 七大助手信息 ============
 ASSISTANTS = [
@@ -64,9 +139,20 @@ ASSISTANTS = [
 # ============ 路由 ============
 @app.route("/")
 def index():
-    return render_template("index.html",
-                           assistants=ASSISTANTS,
-                           dashboard=DASHBOARD_DATA)
+    return render_template("index.html", students=STUDENTS)
+
+
+@app.route("/api/dashboard")
+def dashboard():
+    """学情驾驶舱数据 — 动态生成"""
+    student_id = request.args.get("student", "s1")
+    piece = request.args.get("piece", "巴赫")
+    # 从曲目库匹配
+    piece_name = "巴赫小步舞曲Anh.114"
+    for name in ALL_REPERTOIRE:
+        if name in piece or piece in name:
+            piece_name = name; break
+    return jsonify(generate_dashboard_data(student_id, piece_name))
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -346,12 +432,6 @@ def quick_questions():
     """快捷问题"""
     role = request.args.get("role", "teacher")
     return jsonify({"questions": get_quick_questions(role)})
-
-
-@app.route("/api/dashboard")
-def dashboard():
-    """学情驾驶舱数据"""
-    return jsonify(DASHBOARD_DATA)
 
 
 @app.route("/api/workflow", methods=["POST"])

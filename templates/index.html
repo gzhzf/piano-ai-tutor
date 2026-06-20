@@ -61,37 +61,56 @@
 
         <!-- ========== 视图2：学情驾驶舱 ========== -->
         <div class="view view-dashboard" id="view-dashboard">
-            <div class="dashboard-header">
+            <!-- 控制栏：学生切换+曲目选择 -->
+            <div class="dash-controls">
+                <div class="dash-student-switch" id="dashStudents"></div>
+                <div class="dash-piece-select">
+                    <select id="dashPieceSelect" class="dash-select"></select>
+                </div>
+            </div>
+            <!-- 学生信息+评级 -->
+            <div class="dashboard-header" id="dashHeader">
                 <div class="dash-student-info">
-                    <span class="dash-avatar">👤</span>
+                    <span class="dash-avatar" id="dashAvatar">🧒</span>
                     <div>
-                        <div class="dash-student-name">{{ dashboard.student.name }} · {{ dashboard.student.grade }} · {{ dashboard.student.week }}</div>
-                        <div class="dash-piece">当前曲目：{{ dashboard.student.piece }}</div>
+                        <div class="dash-student-name" id="dashStudentName">加载中...</div>
+                        <div class="dash-piece" id="dashPiece">-</div>
                     </div>
                 </div>
-                <div class="dash-rating">综合评级 {{ dashboard.student.rating }}</div>
+                <div class="dash-rating-wrap">
+                    <div class="dash-rating" id="dashRating">-</div>
+                    <div class="dash-score-detail" id="dashScoreDetail"></div>
+                </div>
             </div>
+            <!-- 数据图表区 -->
             <div class="dashboard-grid">
                 <div class="dash-col dash-col-charts">
-                    <div class="dash-card"><img src="{{ dashboard.charts.rhythm }}" alt="节奏"></div>
-                    <div class="dash-card"><img src="{{ dashboard.charts.pitch }}" alt="音准"></div>
-                    <div class="dash-card"><img src="{{ dashboard.charts.hand }}" alt="手型"></div>
+                    <div class="dash-card" id="cardRhythm"><div class="dash-chart-label">节奏准确率</div><canvas id="cvRhythm"></canvas></div>
+                    <div class="dash-card" id="cardPitch"><div class="dash-chart-label">音准正确率</div><canvas id="cvPitch"></canvas></div>
+                    <div class="dash-card" id="cardHand"><div class="dash-chart-label">手型规范度</div><canvas id="cvHand"></canvas></div>
                 </div>
                 <div class="dash-col">
-                    <div class="dash-card dash-card-wide"><img src="{{ dashboard.charts.errors }}" alt="错音率"></div>
-                    <div class="dash-card dash-card-wide"><img src="{{ dashboard.charts.minutes }}" alt="练习时长"></div>
+                    <div class="dash-card dash-card-wide"><div class="dash-chart-label">错音率趋势（4周）</div><canvas id="cvErrors"></canvas></div>
+                    <div class="dash-card dash-card-wide"><div class="dash-chart-label">本周练习时长（分钟）</div><canvas id="cvMinutes"></canvas></div>
                 </div>
                 <div class="dash-col">
-                    <div class="dash-card"><img src="{{ dashboard.charts.radar }}" alt="雷达图"></div>
-                    <div class="dash-card dash-diagnosis">
+                    <div class="dash-card"><div class="dash-chart-label">能力雷达图</div><canvas id="cvRadar"></canvas></div>
+                    <div class="dash-card dash-diagnosis" id="dashDiagnosis">
                         <div class="diagnosis-title">🤖 AI 智能诊断与推荐</div>
-                        <div class="diagnosis-list">
-                            {% for d in dashboard.diagnosis %}
-                            <div class="diagnosis-item diagnosis-{{ d.type }}">{{ d.text }}</div>
-                            {% endfor %}
-                        </div>
+                        <div class="diagnosis-list" id="diagnosisList"></div>
                     </div>
                 </div>
+            </div>
+            <!-- 录音比对区 -->
+            <div class="record-section">
+                <div class="record-title">🎤 演奏录音与AI比对打分</div>
+                <div class="record-controls">
+                    <button id="recordBtn" class="record-btn">🎤 开始录音</button>
+                    <button id="playRefBtn" class="record-btn record-btn-ref" disabled>▶ 播放专业演奏</button>
+                    <button id="compareBtn" class="record-btn record-btn-compare" disabled>📊 AI比对打分</button>
+                </div>
+                <div class="record-result" id="recordResult"></div>
+                <audio id="refAudio" style="display:none"></audio>
             </div>
         </div>
 

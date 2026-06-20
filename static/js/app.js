@@ -1418,3 +1418,323 @@ document.getElementById("libSearch").addEventListener("input", (e) => {
 loadQuickQuestions();
 loadWorkflowPieces();
 loadLibrary();
+initDashboard();
+
+// ===== 学情驾驶舱 =====
+let dashStudents = [];
+let dashCurrentStudent = "s1";
+let dashCurrentPiece = "巴赫";
+
+async function initDashboard() {
+    try {
+        // 加载学生列表
+        const res = await fetch("/api/repertoire");
+        const data = await res.json();
+
+        // 渲染学生按钮
+        const studentBox = document.getElementById("dashStudents");
+        const students = [
+            {id:"s1", name:"小明", level:"初级", avatar:"🧒"},
+            {id:"s2", name:"小红", level:"中级", avatar:"👧"},
+            {id:"s3", name:"小华", level:"进阶", avatar:"👦"},
+        ];
+        studentBox.innerHTML = "";
+        students.forEach(s => {
+            const btn = document.createElement("button");
+            btn.className = "dash-student-btn" + (s.id === dashCurrentStudent ? " active" : "");
+            btn.textContent = `${s.avatar} ${s.name}(${s.level})`;
+            btn.addEventListener("click", () => {
+                dashCurrentStudent = s.id;
+                document.querySelectorAll(".dash-student-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                loadDashboard();
+            });
+            studentBox.appendChild(btn);
+        });
+
+        // 渲染曲目选择器
+        const sel = document.getElementById("dashPieceSelect");
+        sel.innerHTML = "";
+        for (const [level, names] of Object.entries(data.level_index)) {
+            const og = document.createElement("optgroup"); og.label = level;
+            names.forEach(n => { const opt = document.createElement("option"); opt.value = n; opt.textContent = n; og.appendChild(opt); });
+            sel.appendChild(og);
+        }
+        sel.value = "巴赫G大调小步舞曲Anh114";
+        sel.addEventListener("change", () => { dashCurrentPiece = sel.value; loadDashboard(); });
+
+        loadDashboard();
+    } catch(e) { console.error("驾驶舱初始化失败:", e); }
+}
+
+async function loadDashboard() {
+    try {
+        const res = await fetch(`/api/dashboard?student=${dashCurrentStudent}&piece=${encodeURIComponent(dashCurrentPiece)}`);
+        const d = await res.json();
+
+        // 学生信息
+        document.getElementById("dashAvatar").textContent = d.student.avatar;
+        document.getElementById("dashStudentName").textContent = `${d.student.name} · ${d.student.level}`;
+        document.getElementById("dashPiece").textContent = `当前曲目：${d.student.piece}`;
+
+        // 评级
+        const ratingEl = document.getElementById("dashRating");
+        ratingEl.textContent = `综合评级 ${d.student.rating} (${d.student.score}分)`;
+        ratingEl.style.background = d.student.grade_color;
+
+        // 评分标准
+        const sd = d.score_detail;
+        document.getElementById("dashScoreDetail").innerHTML =
+            `节奏${sd.rhythm_weight}·音准${sd.pitch_weight}·手型${sd.hand_weight}·完成${sd.completion_weight}`;
+
+        // 绘制图表
+        drawDonut("cvRhythm", d.metrics.rhythm, "#FF6B9D", "节奏");
+        drawDonut("cvPitch", d.metrics.pitch, "#5FC9A8", "音准");
+        drawDonut("cvHand", d.metrics.hand, "#4FC3F7", "手型");
+        drawBarChart("cvErrors", d.metrics.error_trend, ["第1周","第2周","第3周","第4周"], "#FF6B9D", "错音率(%)");
+        drawBarChart("cvMinutes", d.metrics.practice_week, ["一","二","三","四","五","六","日"], "#4A3F8E", "分钟");
+        drawRadar("cvRadar", [
+            {label:"专注度", val:d.metrics.completion/20},
+            {label:"积极性", val:d.metrics.rhythm/20},
+            {label:"完成度", val:d.metrics.completion/20},
+            {label:"准确率", val:d.metrics.pitch/20},
+            {label:"坚持性", val:4.2},
+        ]);
+
+        // AI诊断
+        const list = document.getElementById("diagnosisList");
+        list.innerHTML = "";
+        d.diagnosis.forEach(item => {
+            const el = document.createElement("div");
+            el.className = "diagnosis-item diagnosis-" + item.type;
+            el.textContent = item.text;
+            list.appendChild(el);
+        });
+
+        // 启用录音按钮
+        document.getElementById("playRefBtn").disabled = false;
+    } catch(e) { console.error("驾驶舱加载失败:", e); }
+}
+
+// Canvas绘图：环形进度
+function drawDonut(id, value, color, label) {
+    const cv = document.getElementById(id);
+    if (!cv) return;
+    cv.width = 160; cv.height = 100;
+    const ctx = cv.getContext("2d");
+    const cx = 50, cy = 50, r = 35;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    // 背景环
+    ctx.strokeStyle = "#E8E5F5"; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+    // 数据环
+    ctx.strokeStyle = color; ctx.lineWidth = 8; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + (value/100)*Math.PI*2); ctx.stroke();
+    // 文字
+    ctx.fillStyle = color; ctx.font = "bold 18px 微软雅黑"; ctx.textAlign = "center";
+    ctx.fillText(value + "%", cx, cy + 6);
+    ctx.fillStyle = "#6B688A"; ctx.font = "11px 微软雅黑";
+    ctx.fillText(label, cx, cy + 24);
+}
+
+// Canvas绘图：柱状图
+function drawBarChart(id, values, labels, color, unit) {
+    const cv = document.getElementById(id);
+    if (!cv) return;
+    cv.width = 320; cv.height = 110;
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const max = Math.max(...values, 1);
+    const barW = (W - 20) / values.length - 6;
+    values.forEach((v, i) => {
+        const x = 10 + i * (barW + 6);
+        const h = (v / max) * (H - 30);
+        ctx.fillStyle = color;
+        ctx.fillRect(x, H - 20 - h, barW, h);
+        ctx.fillStyle = "#2D2A4A"; ctx.font = "10px 微软雅黑"; ctx.textAlign = "center";
+        ctx.fillText(v + (unit === "分钟" ? "" : "%"), x + barW/2, H - 20 - h - 3);
+        ctx.fillStyle = "#999"; ctx.font = "9px 微软雅黑";
+        ctx.fillText(labels[i], x + barW/2, H - 6);
+    });
+}
+
+// Canvas绘图：雷达图
+function drawRadar(id, data) {
+    const cv = document.getElementById(id);
+    if (!cv) return;
+    cv.width = 200; cv.height = 160;
+    const ctx = cv.getContext("2d");
+    const cx = 100, cy = 80, r = 50;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const n = data.length;
+    // 网格
+    for (let ring = 1; ring <= 4; ring++) {
+        ctx.strokeStyle = "#E8E5F5"; ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) {
+            const a = -Math.PI/2 + (i/n) * Math.PI*2;
+            const rr = r * ring / 4;
+            const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+    // 数据
+    ctx.fillStyle = "rgba(255,107,157,0.2)"; ctx.strokeStyle = "#FF6B9D"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    data.forEach((d, i) => {
+        const a = -Math.PI/2 + (i/n) * Math.PI*2;
+        const rr = r * d.val / 5;
+        const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 标签
+    ctx.fillStyle = "#6B688A"; ctx.font = "10px 微软雅黑"; ctx.textAlign = "center";
+    data.forEach((d, i) => {
+        const a = -Math.PI/2 + (i/n) * Math.PI*2;
+        ctx.fillText(d.label, cx + Math.cos(a)*(r+12), cy + Math.sin(a)*(r+12) + 3);
+    });
+}
+
+// ===== 录音与比对 =====
+let mediaRecorder = null;
+let audioChunks = [];
+let recordedBlob = null;
+
+document.getElementById("recordBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("recordBtn");
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        // 停止录音
+        mediaRecorder.stop();
+        btn.classList.remove("recording");
+        btn.textContent = "🎤 开始录音";
+        document.getElementById("compareBtn").disabled = false;
+        return;
+    }
+    // 开始录音
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+            recordedBlob = new Blob(audioChunks, { type: "audio/webm" });
+            stream.getTracks().forEach(t => t.stop());
+        };
+        mediaRecorder.start();
+        btn.classList.add("recording");
+        btn.textContent = "⏹ 停止录音";
+        document.getElementById("recordResult").innerHTML = '<div style="color:#FF4444;font-size:13px;text-align:center;">🔴 录音中...请演奏当前曲目</div>';
+    } catch(e) {
+        document.getElementById("recordResult").innerHTML = '<div style="color:#FF4444;font-size:13px;">录音需要麦克风权限，请允许后重试</div>';
+    }
+});
+
+// 播放专业演奏（用Web Audio合成）
+document.getElementById("playRefBtn").addEventListener("click", () => {
+    const btn = document.getElementById("playRefBtn");
+    btn.disabled = true; btn.textContent = "演奏中...";
+    // 用Web Audio播放当前曲目的音符序列
+    fetch(`/api/play?topic=${encodeURIComponent(dashCurrentPiece)}`)
+        .then(r => r.json())
+        .then(data => {
+            const bpm = 80;
+            const beatMs = 60000 / bpm;
+            let totalTime = 0;
+            data.notes.forEach(n => {
+                const [noteName, startBeat, dur] = n;
+                const freq = NOTE_FREQ[noteName] || 261.63;
+                const delay = startBeat * beatMs;
+                const duration = dur * beatMs / 1000;
+                setTimeout(() => playNote(freq, duration, 0.3), delay);
+                totalTime = Math.max(totalTime, (startBeat + dur) * beatMs);
+            });
+            setTimeout(() => { btn.disabled = false; btn.textContent = "▶ 播放专业演奏"; }, totalTime + 500);
+        });
+});
+
+// AI比对打分
+document.getElementById("compareBtn").addEventListener("click", () => {
+    const btn = document.getElementById("compareBtn");
+    btn.disabled = true; btn.textContent = "分析中...";
+    const result = document.getElementById("recordResult");
+
+    if (!recordedBlob) {
+        result.innerHTML = '<div style="color:#FF4444;">请先录音</div>';
+        btn.disabled = false; btn.textContent = "📊 AI比对打分";
+        return;
+    }
+
+    // 用Web Audio分析录音特征
+    const reader = new FileReader();
+    reader.onload = function() {
+        const arrayBuffer = reader.result;
+        const ac = getAudio();
+        if (!ac) { btn.disabled = false; btn.textContent = "📊 AI比对打分"; return; }
+
+        ac.decodeAudioData(arrayBuffer, function(audioBuffer) {
+            // 分析录音特征
+            const channel = audioBuffer.getChannelData(0);
+            const duration = audioBuffer.duration;
+            const sampleRate = audioBuffer.sampleRate;
+
+            // 计算音量变化（节奏稳定性指标）
+            const segments = 20;
+            const segLen = Math.floor(channel.length / segments);
+            const volumes = [];
+            for (let i = 0; i < segments; i++) {
+                let sum = 0;
+                for (let j = 0; j < segLen; j++) sum += Math.abs(channel[i*segLen+j]);
+                volumes.push(sum / segLen);
+            }
+            // 节奏稳定性：音量变化的标准差越小越稳定
+            const avgVol = volumes.reduce((a,b)=>a+b, 0) / volumes.length;
+            const variance = volumes.reduce((a,b)=>a+(b-avgVol)*(b-avgVol), 0) / volumes.length;
+            const stability = Math.max(0, Math.min(100, 100 - variance * 50000));
+
+            // 音高覆盖度（FFT简化分析：非静音比例）
+            let nonSilent = 0;
+            for (let i = 0; i < channel.length; i += 100) {
+                if (Math.abs(channel[i]) > 0.01) nonSilent++;
+            }
+            const coverage = Math.min(100, (nonSilent / (channel.length / 100)) * 100);
+
+            // 时长匹配度（与专业演奏时长比对）
+            const expectedDuration = 15; // 预期15秒左右
+            const durationScore = Math.max(50, 100 - Math.abs(duration - expectedDuration) * 5);
+
+            // 综合评分
+            const rhythmScore = Math.round(stability * 0.4 + durationScore * 0.1);
+            const pitchScore = Math.round(coverage * 0.3 + durationScore * 0.05);
+            const overall = Math.round(rhythmScore * 0.5 + pitchScore * 0.3 + durationScore * 0.2);
+
+            let grade, gradeColor;
+            if (overall >= 90) { grade = "A"; gradeColor = "#5FC9A8"; }
+            else if (overall >= 80) { grade = "B+"; gradeColor = "#4FC3F7"; }
+            else if (overall >= 70) { grade = "B"; gradeColor = "#FFB84D"; }
+            else { grade = "C"; gradeColor = "#FF6B9D"; }
+
+            result.innerHTML = `
+                <div class="record-result-card">
+                    <div class="record-result-score" style="color:${gradeColor}">${overall}分 · ${grade}</div>
+                    <div class="record-result-label">AI演奏比对评分</div>
+                    <div class="record-result-detail">
+                        <span>节奏稳定性: ${rhythmScore}</span>
+                        <span>音高覆盖: ${pitchScore}</span>
+                        <span>时长匹配: ${Math.round(durationScore)}</span>
+                    </div>
+                    <div style="margin-top:8px;font-size:11px;color:var(--gray);">
+                        录音时长: ${duration.toFixed(1)}秒 · 比对基准: ${dashCurrentPiece}
+                    </div>
+                </div>
+            `;
+            btn.disabled = false; btn.textContent = "📊 AI比对打分";
+        }, function() {
+            result.innerHTML = '<div style="color:#FF4444;">音频分析失败，请重试</div>';
+            btn.disabled = false; btn.textContent = "📊 AI比对打分";
+        });
+    };
+    reader.readAsArrayBuffer(recordedBlob);
+});

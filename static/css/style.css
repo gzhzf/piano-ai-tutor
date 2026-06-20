@@ -79,21 +79,33 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 .send-btn:disabled { background:var(--light-gray); cursor:not-allowed; }
 
 /* ===== 学情驾驶舱 ===== */
-.view-dashboard { display:none; flex-direction:column; padding:20px 28px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.view-dashboard { display:none; flex-direction:column; padding:16px 24px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
 .view-dashboard.active { display:flex; }
-.dashboard-header { display:flex; justify-content:space-between; align-items:center; background:var(--primary); border-radius:14px; padding:14px 20px; margin-bottom:16px; }
+/* 控制栏 */
+.dash-controls { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+.dash-student-switch { display:flex; gap:6px; }
+.dash-student-btn { padding:6px 14px; border:2px solid var(--light-gray); background:var(--white); border-radius:10px; cursor:pointer; font-size:13px; font-family:inherit; transition:all 0.2s; }
+.dash-student-btn.active { border-color:var(--primary); background:var(--primary); color:var(--white); }
+.dash-select { padding:6px 12px; border:2px solid var(--light-gray); border-radius:10px; font-size:13px; font-family:inherit; outline:none; min-width:200px; }
+.dash-select:focus { border-color:var(--pink); }
+/* 信息栏 */
+.dashboard-header { display:flex; justify-content:space-between; align-items:center; background:var(--primary); border-radius:14px; padding:14px 20px; margin-bottom:14px; }
 .dash-student-info { display:flex; align-items:center; gap:12px; }
 .dash-avatar { font-size:28px; }
 .dash-student-name { color:var(--white); font-size:15px; font-weight:600; }
 .dash-piece { color:var(--orange); font-size:12px; margin-top:3px; }
-.dash-rating { background:var(--mint); color:var(--white); padding:7px 16px; border-radius:10px; font-weight:700; font-size:14px; }
-.dashboard-grid { display:flex; gap:14px; }
-.dash-col { display:flex; flex-direction:column; gap:14px; }
-.dash-col-charts { width:210px; }
+.dash-rating-wrap { text-align:right; }
+.dash-rating { background:var(--mint); color:var(--white); padding:7px 16px; border-radius:10px; font-weight:700; font-size:14px; display:inline-block; }
+.dash-score-detail { color:rgba(255,255,255,0.7); font-size:10px; margin-top:4px; }
+/* 图表 */
+.dashboard-grid { display:flex; gap:12px; }
+.dash-col { display:flex; flex-direction:column; gap:12px; }
+.dash-col-charts { width:200px; }
 .dash-card { background:var(--white); border-radius:12px; padding:8px; box-shadow:0 2px 10px rgba(74,63,142,0.08); }
-.dash-card-wide { width:360px; }
-.dash-card img { width:100%; display:block; }
-.dash-diagnosis { background:var(--primary); padding:14px; width:280px; }
+.dash-card-wide { width:340px; }
+.dash-chart-label { font-size:11px; color:var(--gray); font-weight:600; text-align:center; margin-bottom:4px; }
+.dash-card canvas { width:100%; display:block; }
+.dash-diagnosis { background:var(--primary); padding:14px; width:260px; }
 .diagnosis-title { color:var(--orange); font-size:14px; font-weight:700; margin-bottom:10px; }
 .diagnosis-list { display:flex; flex-direction:column; gap:6px; }
 .diagnosis-item { color:var(--white); font-size:12px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.15); }
@@ -101,6 +113,23 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 .diagnosis-warn::before { content:"⚠ "; color:var(--orange); }
 .diagnosis-good::before { content:"✓ "; color:var(--mint); }
 .diagnosis-suggest::before { content:"→ "; color:var(--sky); }
+/* 录音区 */
+.record-section { margin-top:16px; background:var(--white); border-radius:14px; padding:16px; box-shadow:0 2px 10px rgba(74,63,142,0.08); }
+.record-title { font-size:14px; font-weight:700; color:var(--primary); margin-bottom:10px; }
+.record-controls { display:flex; gap:10px; flex-wrap:wrap; }
+.record-btn { padding:10px 18px; border:none; border-radius:10px; font-size:13px; cursor:pointer; font-family:inherit; font-weight:600; transition:all 0.2s; background:var(--pink); color:var(--white); }
+.record-btn:hover { opacity:0.85; }
+.record-btn:disabled { background:var(--light-gray); cursor:not-allowed; }
+.record-btn-ref { background:var(--sky); }
+.record-btn-compare { background:var(--mint); }
+.record-btn.recording { background:#FF4444; animation:recPulse 1s infinite; }
+@keyframes recPulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+.record-result { margin-top:12px; }
+.record-result-card { background:var(--soft-purple); border-radius:10px; padding:14px; text-align:center; }
+.record-result-score { font-size:32px; font-weight:700; color:var(--primary); }
+.record-result-label { font-size:13px; color:var(--gray); margin-top:4px; }
+.record-result-detail { display:flex; justify-content:center; gap:16px; margin-top:10px; font-size:12px; color:var(--dark); }
+.record-result-detail span { background:var(--white); padding:4px 10px; border-radius:8px; }
 
 /* ===== 工作流演示 ===== */
 .view-workflow { display:none; flex-direction:column; padding:20px 28px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -245,15 +274,19 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
     .qq-btn { font-size:11px; padding:5px 10px; }
     .chat-input-area { padding:8px 12px 12px; }
 
-    .view-dashboard { padding:14px 12px; }
+    .view-dashboard { padding:12px 10px; }
+    .dash-controls { flex-direction:column; align-items:stretch; }
+    .dash-select { min-width:0; width:100%; }
     .dashboard-grid { flex-direction:column; }
     .dash-col-charts, .dash-col { width:100%; }
-    .dash-col-charts { flex-direction:row; flex-wrap:wrap; gap:8px; }
-    .dash-col-charts .dash-card { flex:1; min-width:100px; }
+    .dash-col-charts { flex-direction:row; flex-wrap:wrap; gap:6px; }
+    .dash-col-charts .dash-card { flex:1; min-width:90px; }
     .dash-card-wide { width:100%; }
     .dash-diagnosis { width:100%; }
-    .dashboard-header { padding:12px 14px; }
-    .dash-student-name { font-size:14px; }
+    .dashboard-header { padding:10px 12px; }
+    .dash-student-name { font-size:13px; }
+    .record-controls { flex-direction:column; }
+    .record-btn { width:100%; }
 
     .view-workflow { padding:14px 12px; }
     .wf-input-panel { flex-direction:column; align-items:stretch; gap:8px; padding:12px; }
