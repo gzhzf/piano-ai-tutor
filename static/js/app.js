@@ -35,6 +35,10 @@ function initWelcomeAnim() {
     let mIdx = 0, lastBeat = 0, isPlaying = true, frame = 0;
     const beatInt = 36, playDur = 600;
 
+    // 播放Aerith's Theme原曲音频
+    const audio = document.getElementById("welcomeAudio");
+    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
+
     function draw() {
         ctx.clearRect(0, 0, W, H);
         // 半透明黑色蒙版（让粒子叠加在图片上）
@@ -60,7 +64,7 @@ function initWelcomeAnim() {
             musicNotes.push({x:rx,y:ry,vx:(Math.random()-0.3)*1,vy:-Math.random()*1.5-0.7,
                 life:1,sym:noteSyms[Math.floor(Math.random()*4)],sz:Math.random()*3+8,
                 c:["#7FC4FF","#FFD700","#FF9DB5","#A8D8FF"][Math.floor(Math.random()*4)]});
-            playNote(NOTE_FREQ[n.n]||261.63,Math.min(nd*0.4,1.5),0.1); mIdx++;}
+            mIdx++;}
         if(isPlaying&&frame>=playDur)isPlaying=false;
         // 音符飘起
         for(let i=musicNotes.length-1;i>=0;i--){const p=musicNotes[i]; p.x+=p.vx; p.y+=p.vy; p.vy*=0.99; p.life-=0.008;
@@ -1005,6 +1009,10 @@ function animFindMiddleC(ctx, cv) {
     let phase = 0, frame = 0;
     let lastPhase = -1;
 
+    // 播放Aerith's Theme原曲音频
+    const audio = document.getElementById("welcomeAudio");
+    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
+
     function draw() {
         ctx.clearRect(0, 0, W, H);
         // 阶段切换时播放音效
@@ -1051,6 +1059,10 @@ function animHandShape(ctx, cv) {
     const W = cv.width, H = cv.height;
     let frame = 0;
     let lastFinger = -1;
+    // 播放Aerith's Theme原曲音频
+    const audio = document.getElementById("welcomeAudio");
+    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
+
     function draw() {
         ctx.clearRect(0, 0, W, H);
         const cx = W / 2, cy = H / 2 + 10;
@@ -1121,6 +1133,10 @@ function animRhythm(ctx, cv) {
     let frame = 0;
     let playedNotes = new Set();
 
+    // 播放Aerith's Theme原曲音频
+    const audio = document.getElementById("welcomeAudio");
+    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
+
     function draw() {
         ctx.clearRect(0, 0, W, H);
         ctx.strokeStyle = "rgba(255,107,157,0.4)"; ctx.lineWidth = 2;
@@ -1185,6 +1201,10 @@ function animBlackWhite(ctx, cv) {
     let phase = 0; // 0=白键演示, 1=黑键演示, 2=合在一起
     let lastPlayed = -1;
 
+    // 播放Aerith's Theme原曲音频
+    const audio = document.getElementById("welcomeAudio");
+    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
+
     function draw() {
         ctx.clearRect(0, 0, W, H);
         // 白键
@@ -1231,6 +1251,10 @@ function animTrebleClef(ctx, cv) {
     const lineStartX = 30, lineEndX = W - 30;
     const lineSpacing = 14;
     const lineY0 = H / 2 - lineSpacing * 2;
+
+    // 播放Aerith's Theme原曲音频
+    const audio = document.getElementById("welcomeAudio");
+    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
@@ -1312,6 +1336,10 @@ function animMetronome(ctx, cv) {
     const bpm = 80; // 每分钟80拍
     const beatInterval = 60 / bpm * 1000 / (1000/60); // 帧/拍 ≈ 45帧
     let lastBeat = -1;
+
+    // 播放Aerith's Theme原曲音频
+    const audio = document.getElementById("welcomeAudio");
+    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
