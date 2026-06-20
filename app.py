@@ -48,13 +48,13 @@ def generate_dashboard_data(student_id, piece_name):
     # 生成各项指标
     rhythm = max(50, min(99, rng.randint(base_low, base_high) + difficulty_mod))
     pitch = max(50, min(99, rng.randint(base_low, base_high) + difficulty_mod + 2))
-    hand = max(50, min(99, rng.randint(base_low + 5, base_high + 3) + difficulty_mod // 2))
-    completion = max(50, min(99, rng.randint(base_low - 5, base_high - 3) + difficulty_mod))
+    completion = max(50, min(99, rng.randint(base_low - 3, base_high - 1) + difficulty_mod))
+    fluency = max(50, min(99, rng.randint(base_low - 5, base_high - 3) + difficulty_mod))
     error_rate = max(1, 100 - pitch - rng.randint(0, 8))
     practice_min = rng.randint(80, 180)
 
-    # 自动评分：节奏40%+音准30%+手型20%+完成度10%
-    score = rhythm * 0.4 + pitch * 0.3 + hand * 0.2 + completion * 0.1
+    # 自动评分：节奏35%+音准30%+完整度20%+流畅度15%
+    score = rhythm * 0.35 + pitch * 0.30 + completion * 0.20 + fluency * 0.15
     if score >= 90: rating, grade_color = "A", "#5FC9A8"
     elif score >= 80: rating, grade_color = "B+", "#4FC3F7"
     elif score >= 70: rating, grade_color = "B", "#FFB84D"
@@ -71,10 +71,10 @@ def generate_dashboard_data(student_id, piece_name):
         diagnosis.append({"type": "warn", "text": f"错音率{error_rate}%，需加强音准练习"})
     else:
         diagnosis.append({"type": "good", "text": f"错音率{error_rate}%，控制良好"})
-    if hand >= 88:
-        diagnosis.append({"type": "good", "text": "手型规范度良好，保持现有训练"})
+    if fluency >= 85:
+        diagnosis.append({"type": "good", "text": f"演奏流畅度{fluency}%，乐句衔接自然"})
     else:
-        diagnosis.append({"type": "warn", "text": f"手型规范度{hand}%，注意掌关节撑起"})
+        diagnosis.append({"type": "warn", "text": f"演奏流畅度{fluency}%，注意乐句间衔接"})
 
     # 曲目针对性建议
     if piece_info:
@@ -102,17 +102,18 @@ def generate_dashboard_data(student_id, piece_name):
             "grade_color": grade_color, "score": round(score, 1)
         },
         "metrics": {
-            "rhythm": rhythm, "pitch": pitch, "hand": hand,
-            "completion": completion, "error_rate": error_rate,
+            "rhythm": rhythm, "pitch": pitch,
+            "completion": completion, "fluency": fluency,
+            "error_rate": error_rate,
             "practice_minutes": practice_min,
             "error_trend": error_trend,
             "practice_week": practice_week
         },
         "score_detail": {
-            "rhythm_weight": "40%", "pitch_weight": "30%",
-            "hand_weight": "20%", "completion_weight": "10%",
+            "rhythm_weight": "35%", "pitch_weight": "30%",
+            "completion_weight": "20%", "fluency_weight": "15%",
             "rhythm_score": rhythm, "pitch_score": pitch,
-            "hand_score": hand, "completion_score": completion,
+            "completion_score": completion, "fluency_score": fluency,
             "total_score": round(score, 1)
         },
         "diagnosis": diagnosis

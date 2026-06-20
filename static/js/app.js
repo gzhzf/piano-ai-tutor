@@ -1429,19 +1429,19 @@ async function loadDashboard() {
         // 评分标准
         const sd = d.score_detail;
         document.getElementById("dashScoreDetail").innerHTML =
-            `节奏${sd.rhythm_weight}·音准${sd.pitch_weight}·手型${sd.hand_weight}·完成${sd.completion_weight}`;
+            `节奏${sd.rhythm_weight}·音准${sd.pitch_weight}·完整度${sd.completion_weight}·流畅度${sd.fluency_weight}`;
 
         // 绘制图表
         drawDonut("cvRhythm", d.metrics.rhythm, "#FF6B9D", "节奏");
         drawDonut("cvPitch", d.metrics.pitch, "#5FC9A8", "音准");
-        drawDonut("cvHand", d.metrics.hand, "#4FC3F7", "手型");
+        drawDonut("cvHand", d.metrics.fluency, "#FFB84D", "流畅度");
         drawBarChart("cvErrors", d.metrics.error_trend, ["第1周","第2周","第3周","第4周"], "#FF6B9D", "错音率(%)");
         drawBarChart("cvMinutes", d.metrics.practice_week, ["一","二","三","四","五","六","日"], "#4A3F8E", "分钟");
         drawRadar("cvRadar", [
-            {label:"专注度", val:d.metrics.completion/20},
-            {label:"积极性", val:d.metrics.rhythm/20},
-            {label:"完成度", val:d.metrics.completion/20},
-            {label:"准确率", val:d.metrics.pitch/20},
+            {label:"节奏", val:d.metrics.rhythm/20},
+            {label:"音准", val:d.metrics.pitch/20},
+            {label:"完整度", val:d.metrics.completion/20},
+            {label:"流畅度", val:d.metrics.fluency/20},
             {label:"坚持性", val:4.2},
         ]);
 
