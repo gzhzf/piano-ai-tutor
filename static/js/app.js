@@ -208,7 +208,7 @@ function playNote(freq, dur = 0.5, vol = 0.3) {
     osc.start(t); osc.stop(t + dur);
 }
 // 钢琴频率（中央C=261.63Hz）
-const NOTE_FREQ = { "C4":261.63, "D4":293.66, "E4":329.63, "F4":349.23, "G4":392.00, "A4":440.00, "B4":493.88, "C5":523.25 };
+const NOTE_FREQ = { "C4":261.63, "C#4":277.18, "D4":293.66, "D#4":311.13, "E4":329.63, "F4":349.23, "F#4":369.99, "G4":392.00, "G#4":415.30, "A4":440.00, "A#4":466.16, "B4":493.88, "C5":523.25, "C#5":554.37, "D5":587.33, "D#5":622.25, "E5":659.25, "F5":698.46 };
 // 拍手声（噪声短脉冲）
 function playClap(vol = 0.2) {
     const ac = getAudio(); if (!ac) return;
@@ -235,6 +235,9 @@ function appendAnimation(msgEl, type) {
     if (type === "中央C") return animFindMiddleC(ctx, canvas);
     if (type === "手型") return animHandShape(ctx, canvas);
     if (type === "节奏") return animRhythm(ctx, canvas);
+    if (type === "黑键白键") return animBlackWhite(ctx, canvas);
+    if (type === "高音谱号") return animTrebleClef(ctx, canvas);
+    if (type === "节拍器") return animMetronome(ctx, canvas);
 }
 
 // 动画1：寻找中央C — 钢琴键盘高亮2黑键→左白键
@@ -418,7 +421,212 @@ function animRhythm(ctx, cv) {
     draw();
 }
 
-// ===== 文本格式化 =====
+// 动画4：黑键白键区别 — 键盘上交替高亮黑白键+播放对应音
+function animBlackWhite(ctx, cv) {
+    const W = cv.width, H = cv.height;
+    const wkW = 26, bkW = 16, bkH = 50, wkH = 85;
+    const startX = (W - wkW * 11) / 2;
+    // 白键音阶C D E F G A B C
+    const whiteNotes = ["C4","D4","E4","F4","G4","A4","B4","C5","D5","E5","F5"];
+    // 黑键位置+音名
+    const blackKeys = [
+        { off: 0.7, note: "C#4" }, { off: 1.7, note: "D#4" },
+        { off: 3.7, note: "F#4" }, { off: 4.7, note: "G#4" }, { off: 5.7, note: "A#4" },
+        { off: 7.7, note: "C#5" }, { off: 8.7, note: "D#5" },
+        { off: 10.7, note: "F#5" }
+    ];
+    let frame = 0;
+    let phase = 0; // 0=白键演示, 1=黑键演示, 2=合在一起
+    let lastPlayed = -1;
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        // 白键
+        for (let i = 0; i < 11; i++) {
+            let color = "#FFFFFF";
+            if (phase === 0 && Math.floor(frame / 20) % 8 === i && frame < 160) {
+                color = "#5FC9A8";
+                if (i !== lastPlayed) { lastPlayed = i; playNote(NOTE_FREQ[whiteNotes[i]], 0.3, 0.2); }
+            }
+            ctx.fillStyle = color; ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
+            ctx.fillRect(startX + i * wkW, 18, wkW - 1, wkH); ctx.strokeRect(startX + i * wkW, 18, wkW - 1, wkH);
+        }
+        // 黑键
+        lastPlayed = -1;
+        for (let i = 0; i < blackKeys.length; i++) {
+            const bk = blackKeys[i];
+            let color = "#2D2A4A";
+            if (phase === 1 && Math.floor(frame / 20) % 5 === i && frame >= 160 && frame < 280) {
+                color = "#FFB84D";
+                if (i !== lastPlayed) { lastPlayed = i; playNote(NOTE_FREQ[bk.note] || 277, 0.25, 0.2); }
+            }
+            ctx.fillStyle = color;
+            ctx.fillRect(startX + bk.off * wkW, 18, bkW, bkH);
+        }
+        // 标注
+        ctx.textAlign = "center";
+        if (phase === 0) { ctx.fillStyle = "#5FC9A8"; ctx.font = "bold 12px 微软雅黑"; ctx.fillText("白键 = do re mi fa sol la si（基本音）", W/2, 12); }
+        else if (phase === 1) { ctx.fillStyle = "#FFB84D"; ctx.font = "bold 12px 微软雅黑"; ctx.fillText("黑键 = 升号降号（半步音）", W/2, 12); }
+        else { ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 12px 微软雅黑"; ctx.fillText("黑白合在一起 = 钢琴所有音！", W/2, 12); }
+
+        frame++;
+        if (frame === 160) { phase = 1; lastPlayed = -1; }
+        if (frame === 280) phase = 2;
+        if (frame < 380) requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+// 动画5：高音谱号 — 螺旋绘制+标注G线+中央C位置
+function animTrebleClef(ctx, cv) {
+    const W = cv.width, H = cv.height;
+    let frame = 0;
+    // 五线谱5条线
+    const lineStartX = 30, lineEndX = W - 30;
+    const lineSpacing = 14;
+    const lineY0 = H / 2 - lineSpacing * 2;
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        // 五线谱
+        ctx.strokeStyle = "#6B688A"; ctx.lineWidth = 1.5;
+        for (let i = 0; i < 5; i++) {
+            const y = lineY0 + i * lineSpacing;
+            ctx.beginPath(); ctx.moveTo(lineStartX, y); ctx.lineTo(lineEndX, y); ctx.stroke();
+        }
+        // 线标注
+        ctx.fillStyle = "#AAAAAA"; ctx.font = "9px 微软雅黑"; ctx.textAlign = "right";
+        const lineNames = ["E4", "G4", "B4", "D5", "F5"];
+        for (let i = 0; i < 5; i++) {
+            ctx.fillText(lineNames[i], lineStartX - 4, lineY0 + i * lineSpacing + 3);
+        }
+
+        // 高音谱号（简化为螺旋曲线）
+        const clefX = 50, clefCenterY = lineY0 + lineSpacing * 1; // G线位置
+        const progress = Math.min(frame / 60, 1); // 0-60帧绘制
+        ctx.strokeStyle = "#4A3F8E"; ctx.lineWidth = 3; ctx.lineCap = "round";
+
+        // 绘制螺旋（用贝塞尔曲线近似）
+        if (progress > 0) {
+            ctx.beginPath();
+            const steps = Math.floor(progress * 40);
+            for (let s = 0; s <= steps; s++) {
+                const t = s / 40;
+                const angle = t * Math.PI * 3;
+                const r = 12 * (1 - t * 0.5);
+                const x = clefX + Math.cos(angle - Math.PI/2) * r;
+                const y = clefCenterY + Math.sin(angle - Math.PI/2) * r + t * 20;
+                if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        // 绘制完成后标注
+        if (frame >= 60) {
+            // G线高亮
+            ctx.strokeStyle = "#FF6B9D"; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(lineStartX, lineY0 + lineSpacing); ctx.lineTo(lineEndX, lineY0 + lineSpacing); ctx.stroke();
+            ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 11px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("G线 (sol)", W/2, lineY0 + lineSpacing - 4);
+
+            // 播放G音
+            if (frame === 60) playNote(NOTE_FREQ["G4"], 0.5, 0.25);
+        }
+        if (frame >= 100) {
+            // 中央C标注（下加一线）
+            const cY = lineY0 + lineSpacing * 5 + 3;
+            ctx.strokeStyle = "#5FC9A8"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(lineStartX, cY); ctx.lineTo(lineEndX, cY); ctx.stroke();
+            ctx.fillStyle = "#5FC9A8"; ctx.font = "bold 11px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("下加一线 = 中央C (do)", W/2, cY + 14);
+            // 画一个音符
+            ctx.fillStyle = "#5FC9A8";
+            ctx.beginPath(); ctx.ellipse(W/2 + 40, cY, 5, 4, -0.3, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = "#5FC9A8"; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(W/2 + 45, cY); ctx.lineTo(W/2 + 45, cY - 25); ctx.stroke();
+            // 播放C音
+            if (frame === 100) playNote(NOTE_FREQ["C4"], 0.5, 0.25);
+        }
+        if (frame >= 150) {
+            ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 12px 微软雅黑"; ctx.textAlign = "center";
+            ctx.fillText("高音谱号 = 右手的家", W/2, 12);
+            if (frame === 150) playNote(NOTE_FREQ["G4"], 0.3, 0.2);
+        }
+
+        frame++;
+        if (frame < 300) requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+// 动画6：节拍器 — 摆杆摆动+嗒嗒声+BPM数字
+function animMetronome(ctx, cv) {
+    const W = cv.width, H = cv.height;
+    let frame = 0;
+    const bpm = 80; // 每分钟80拍
+    const beatInterval = 60 / bpm * 1000 / (1000/60); // 帧/拍 ≈ 45帧
+    let lastBeat = -1;
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        const cx = W / 2, baseY = H - 20;
+
+        // 节拍器底座（三角形）
+        ctx.fillStyle = "#4A3F8E";
+        ctx.beginPath();
+        ctx.moveTo(cx - 35, baseY); ctx.lineTo(cx + 35, baseY); ctx.lineTo(cx + 20, baseY - 70); ctx.lineTo(cx - 20, baseY - 70);
+        ctx.closePath(); ctx.fill();
+
+        // 摆杆
+        const beat = Math.floor(frame / 45);
+        const beatProgress = (frame % 45) / 45;
+        const angle = Math.sin(beatProgress * Math.PI) * 0.5 - 0.25; // -0.25到0.25弧度
+        const pendulumY = baseY - 65;
+        const tipX = cx + Math.sin(angle) * 50;
+        const tipY = pendulumY - Math.cos(angle) * 50;
+
+        ctx.strokeStyle = "#FFB84D"; ctx.lineWidth = 3; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(cx, pendulumY); ctx.lineTo(tipX, tipY); ctx.stroke();
+        // 摆锤
+        ctx.fillStyle = "#FF6B9D";
+        ctx.beginPath(); ctx.arc(tipX, tipY, 6, 0, Math.PI*2); ctx.fill();
+
+        // 节拍指示灯
+        const beatNum = beat % 4;
+        const isStrong = beatNum === 0;
+        const litColor = isStrong ? "#FF6B9D" : "#5FC9A8";
+        const justBeat = beatProgress < 0.15;
+
+        // 4个拍点灯
+        for (let i = 0; i < 4; i++) {
+            const bx = cx - 36 + i * 24;
+            const lit = i === beatNum && justBeat;
+            ctx.fillStyle = lit ? litColor : "#E8E5F5";
+            ctx.beginPath(); ctx.arc(bx, baseY - 80, 5, 0, Math.PI*2); ctx.fill();
+        }
+
+        // BPM数字
+        ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 20px 微软雅黑"; ctx.textAlign = "center";
+        ctx.fillText("♩=" + bpm, cx, baseY - 95);
+
+        // 标注
+        ctx.fillStyle = isStrong ? "#FF6B9D" : "#5FC9A8"; ctx.font = "bold 12px 微软雅黑";
+        const labels = ["强", "弱", "弱", "弱"];
+        ctx.fillText(labels[beatNum], cx, 14);
+
+        // 播放嗒嗒声
+        if (beat !== lastBeat) {
+            lastBeat = beat;
+            playClap(isStrong ? 0.3 : 0.15); // 强拍声音大
+            // 同时播放音高
+            playNote(isStrong ? NOTE_FREQ["C4"] : NOTE_FREQ["E4"], 0.15, isStrong ? 0.2 : 0.12);
+        }
+
+        frame++;
+        if (frame < 360) requestAnimationFrame(draw);
+    }
+    draw();
+}
 function formatText(text) {
     return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
