@@ -193,89 +193,147 @@ function speakerName(s) {
     return { teacher: "老师", student: "小明", ai: "AI助手" }[s] || s;
 }
 
-// SVG卡通人物头像
+// SVG卡通人物（大图+动作）
 function svgChar(type, expression) {
-    const w = 80, h = 90;
+    const w = 120, h = 140;
     let svg = `<svg viewBox="0 0 ${w} ${h}" class="comic-char-svg">`;
 
     if (type === "teacher") {
-        // 老师：长发+眼镜+微笑
+        // === 老师 ===
         svg += `<rect x="0" y="0" width="${w}" height="${h}" fill="none"/>`;
         // 头发
-        svg += `<path d="M20,30 Q20,12 40,12 Q60,12 60,30 L60,55 Q60,60 55,58 L50,50 L30,50 L25,58 Q20,60 20,55 Z" fill="#4A3F8E"/>`;
+        svg += `<path d="M28,42 Q28,16 60,16 Q92,16 92,42 L92,82 Q92,88 86,86 L80,74 L40,74 L34,86 Q28,88 28,82 Z" fill="#4A3F8E"/>`;
         // 脸
-        svg += `<ellipse cx="40" cy="38" rx="16" ry="18" fill="#FFD9B8"/>`;
+        svg += `<ellipse cx="60" cy="56" rx="24" ry="26" fill="#FFD9B8"/>`;
         // 眼镜
-        svg += `<circle cx="34" cy="36" r="5" fill="none" stroke="#4A3F8E" stroke-width="1.5"/>`;
-        svg += `<circle cx="46" cy="36" r="5" fill="none" stroke="#4A3F8E" stroke-width="1.5"/>`;
-        svg += `<line x1="39" y1="36" x2="41" y2="36" stroke="#4A3F8E" stroke-width="1.5"/>`;
-        // 表情
+        svg += `<circle cx="50" cy="54" r="7" fill="none" stroke="#4A3F8E" stroke-width="2"/>`;
+        svg += `<circle cx="70" cy="54" r="7" fill="none" stroke="#4A3F8E" stroke-width="2"/>`;
+        svg += `<line x1="57" y1="54" x2="63" y2="54" stroke="#4A3F8E" stroke-width="2"/>`;
+        // 表情+动作
         if (expression === "proud") {
-            svg += `<path d="M33,44 Q40,50 47,44" fill="none" stroke="#C44" stroke-width="1.5"/>`;
-            svg += `<text x="54" y="30" font-size="10">✨</text>`;
+            // 骄傲：大笑+双手张开+星星
+            svg += `<path d="M48,66 Q60,76 72,66" fill="none" stroke="#C44" stroke-width="2"/>`;
+            svg += `<circle cx="50" cy="52" r="2" fill="#333"/><circle cx="70" cy="52" r="2" fill="#333"/>`;
+            svg += `<text x="86" y="34" font-size="14">✨</text>`;
+            // 双手张开
+            svg += `<path d="M36,92 Q20,100 18,118" fill="none" stroke="#FFD9B8" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<path d="M84,92 Q100,100 102,118" fill="none" stroke="#FFD9B8" stroke-width="8" stroke-linecap="round"/>`;
         } else if (expression === "explain") {
-            svg += `<path d="M35,46 L45,46" fill="none" stroke="#C44" stroke-width="1.5"/>`;
-            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
+            // 讲解：张嘴+一只手指向旁边
+            svg += `<ellipse cx="60" cy="68" rx="5" ry="4" fill="#C44"/>`;
+            svg += `<circle cx="50" cy="52" r="2" fill="#333"/><circle cx="70" cy="52" r="2" fill="#333"/>`;
+            // 右手指向
+            svg += `<path d="M84,92 Q98,90 106,86" fill="none" stroke="#FFD9B8" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<circle cx="108" cy="85" r="4" fill="#FFD9B8"/>`;
+            // 左手放下
+            svg += `<path d="M36,92 Q30,108 30,120" fill="none" stroke="#FFD9B8" stroke-width="8" stroke-linecap="round"/>`;
         } else {
-            svg += `<path d="M33,44 Q40,48 47,44" fill="none" stroke="#C44" stroke-width="1.5"/>`;
-            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
+            // 微笑：微笑+双手放下
+            svg += `<path d="M48,66 Q60,72 72,66" fill="none" stroke="#C44" stroke-width="2"/>`;
+            svg += `<circle cx="50" cy="52" r="2" fill="#333"/><circle cx="70" cy="52" r="2" fill="#333"/>`;
+            svg += `<path d="M38,92 Q32,108 32,122" fill="none" stroke="#FFD9B8" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<path d="M82,92 Q88,108 88,122" fill="none" stroke="#FFD9B8" stroke-width="8" stroke-linecap="round"/>`;
         }
-        // 身体（衣服）
-        svg += `<path d="M28,60 L52,60 L56,85 L24,85 Z" fill="#FF6B9D"/>`;
-        svg += `<rect x="38" y="60" width="4" height="10" fill="#E55588"/>`;
+        // 身体（裙子）
+        svg += `<path d="M40,88 L80,88 L92,135 L28,135 Z" fill="#FF6B9D"/>`;
+        svg += `<rect x="57" y="88" width="6" height="14" fill="#E55588"/>`;
 
     } else if (type === "student") {
-        // 学生：小男孩平头+圆脸
+        // === 学生 ===
         svg += `<rect x="0" y="0" width="${w}" height="${h}" fill="none"/>`;
-        // 头发（短发）
-        svg += `<path d="M22,32 Q22,14 40,14 Q58,14 58,32 L56,28 L52,30 L48,28 L44,30 L40,28 L36,30 L32,28 L28,30 L24,28 Z" fill="#3A2D1A"/>`;
+        // 头发（平头）
+        svg += `<path d="M32,46 Q32,18 60,18 Q88,18 88,46 L84,40 L78,44 L72,40 L66,44 L60,40 L54,44 L48,40 L42,44 L36,40 Z" fill="#3A2D1A"/>`;
         // 脸
-        svg += `<ellipse cx="40" cy="36" rx="16" ry="17" fill="#FFE0C0"/>`;
-        // 眼睛
+        svg += `<ellipse cx="60" cy="52" rx="24" ry="25" fill="#FFE0C0"/>`;
+
         if (expression === "happy") {
-            svg += `<path d="M32,34 Q34,32 36,34" fill="none" stroke="#333" stroke-width="1.5"/>`;
-            svg += `<path d="M44,34 Q46,32 48,34" fill="none" stroke="#333" stroke-width="1.5"/>`;
-            svg += `<path d="M34,42 Q40,48 46,42" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+            // 开心：弯眼+大笑+双手举起
+            svg += `<path d="M46,48 Q50,44 54,48" fill="none" stroke="#333" stroke-width="2"/>`;
+            svg += `<path d="M66,48 Q70,44 74,48" fill="none" stroke="#333" stroke-width="2"/>`;
+            svg += `<path d="M48,62 Q60,72 72,62" fill="none" stroke="#C44" stroke-width="2"/>`;
+            // 双手举起
+            svg += `<path d="M38,88 Q28,74 24,60" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<path d="M82,88 Q92,74 96,60" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<text x="88" y="34" font-size="14">🎉</text>`;
         } else if (expression === "worry") {
-            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
-            svg += `<path d="M35,44 Q40,41 45,44" fill="none" stroke="#C44" stroke-width="1.5"/>`;
-            svg += `<text x="56" y="28" font-size="10">💧</text>`;
+            // 担忧：皱眉+歪嘴+手摸头
+            svg += `<line x1="46" y1="46" x2="54" y2="48" stroke="#333" stroke-width="2"/>`;
+            svg += `<line x1="66" y1="48" x2="74" y2="46" stroke="#333" stroke-width="2"/>`;
+            svg += `<circle cx="50" cy="52" r="2" fill="#333"/><circle cx="70" cy="52" r="2" fill="#333"/>`;
+            svg += `<path d="M50,64 Q60,60 70,64" fill="none" stroke="#C44" stroke-width="2"/>`;
+            // 右手摸头
+            svg += `<path d="M82,88 Q92,72 84,46" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
+            // 左手放下
+            svg += `<path d="M38,88 Q32,104 32,118" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<text x="88" y="38" font-size="14">💧</text>`;
         } else if (expression === "focus") {
-            svg += `<line x1="32" y1="35" x2="36" y2="35" stroke="#333" stroke-width="2"/>`;
-            svg += `<line x1="44" y1="35" x2="48" y2="35" stroke="#333" stroke-width="2"/>`;
-            svg += `<path d="M36,43 L44,43" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+            // 专注：眯眼+抿嘴+双手弹琴
+            svg += `<line x1="44" y1="50" x2="54" y2="50" stroke="#333" stroke-width="2.5"/>`;
+            svg += `<line x1="66" y1="50" x2="76" y2="50" stroke="#333" stroke-width="2.5"/>`;
+            svg += `<line x1="50" y1="64" x2="70" y2="64" stroke="#C44" stroke-width="2"/>`;
+            // 双手在前面弹琴
+            svg += `<path d="M38,88 Q42,100 36,112" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<path d="M82,88 Q78,100 84,112" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
+            // 小钢琴
+            svg += `<rect x="30" y="112" width="60" height="12" rx="2" fill="#4A3F8E"/>`;
+            svg += `<rect x="32" y="112" width="8" height="12" fill="#2D2A4A"/><rect x="44" y="112" width="8" height="12" fill="#2D2A4A"/>`;
+            svg += `<rect x="56" y="112" width="8" height="12" fill="#2D2A4A"/><rect x="68" y="112" width="8" height="12" fill="#2D2A4A"/>`;
         } else {
-            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
-            svg += `<path d="M35,42 Q40,45 45,42" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+            // 默认：微笑+手放下
+            svg += `<circle cx="50" cy="52" r="2" fill="#333"/><circle cx="70" cy="52" r="2" fill="#333"/>`;
+            svg += `<path d="M50,62 Q60,68 70,62" fill="none" stroke="#C44" stroke-width="2"/>`;
+            svg += `<path d="M38,88 Q32,104 32,120" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<path d="M82,88 Q88,104 88,120" fill="none" stroke="#FFE0C0" stroke-width="8" stroke-linecap="round"/>`;
         }
         // 身体（T恤）
-        svg += `<path d="M28,56 L52,56 L54,85 L26,85 Z" fill="#4FC3F7"/>`;
+        svg += `<path d="M38,84 L82,84 L88,135 L32,135 Z" fill="#4FC3F7"/>`;
 
     } else if (type === "ai") {
-        // AI助手：机器人+天线+屏幕脸
+        // === AI助手 ===
         svg += `<rect x="0" y="0" width="${w}" height="${h}" fill="none"/>`;
         // 天线
-        svg += `<line x1="40" y1="14" x2="40" y2="8" stroke="#4A3F8E" stroke-width="2"/>`;
-        svg += `<circle cx="40" cy="7" r="3" fill="#FF6B9D"/>`;
+        svg += `<line x1="60" y1="22" x2="60" y2="12" stroke="#4A3F8E" stroke-width="3"/>`;
+        svg += `<circle cx="60" cy="10" r="5" fill="#FF6B9D"/>`;
         // 头（圆角矩形）
-        svg += `<rect x="22" y="14" width="36" height="38" rx="8" fill="#E8E5F5" stroke="#4A3F8E" stroke-width="2"/>`;
+        svg += `<rect x="30" y="22" width="60" height="56" rx="12" fill="#E8E5F5" stroke="#4A3F8E" stroke-width="2.5"/>`;
         // 屏幕脸
-        svg += `<rect x="26" y="20" width="28" height="20" rx="4" fill="#2D2A4A"/>`;
-        // 眼睛（LED风格）
+        svg += `<rect x="36" y="30" width="48" height="32" rx="6" fill="#2D2A4A"/>`;
+
         if (expression === "praise" || expression === "encourage") {
-            svg += `<circle cx="34" cy="30" r="3" fill="#5FC9A8"/>`;
-            svg += `<circle cx="46" cy="30" r="3" fill="#5FC9A8"/>`;
-            svg += `<path d="M34,35 Q40,38 46,35" fill="none" stroke="#5FC9A8" stroke-width="1.5"/>`;
+            // 表扬/鼓励：绿色笑眼+大拇指
+            svg += `<circle cx="50" cy="44" r="4" fill="#5FC9A8"/>`;
+            svg += `<circle cx="70" cy="44" r="4" fill="#5FC9A8"/>`;
+            svg += `<path d="M50,54 Q60,60 70,54" fill="none" stroke="#5FC9A8" stroke-width="2"/>`;
+            // 大拇指
+            svg += `<path d="M82,88 Q96,84 100,76" fill="none" stroke="#E8E5F5" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<circle cx="102" cy="74" r="6" fill="#E8E5F5" stroke="#4A3F8E" stroke-width="1.5"/>`;
+            svg += `<text x="96" y="58" font-size="14">👍</text>`;
+            // 左手放下
+            svg += `<path d="M38,88 Q32,104 32,120" fill="none" stroke="#E8E5F5" stroke-width="8" stroke-linecap="round"/>`;
+        } else if (expression === "help") {
+            // 帮助：蓝色眼+手指向（指引）
+            svg += `<circle cx="50" cy="44" r="4" fill="#4FC3F7"/>`;
+            svg += `<circle cx="70" cy="44" r="4" fill="#4FC3F7"/>`;
+            svg += `<line x1="48" y1="54" x2="72" y2="54" stroke="#4FC3F7" stroke-width="2"/>`;
+            // 右手指引
+            svg += `<path d="M82,88 Q98,86 106,80" fill="none" stroke="#E8E5F5" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<circle cx="108" cy="79" r="5" fill="#E8E5F5" stroke="#4A3F8E" stroke-width="1.5"/>`;
+            // 左手放下
+            svg += `<path d="M38,88 Q32,104 32,120" fill="none" stroke="#E8E5F5" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<text x="92" y="62" font-size="14">💡</text>`;
         } else {
-            svg += `<circle cx="34" cy="30" r="3" fill="#4FC3F7"/>`;
-            svg += `<circle cx="46" cy="30" r="3" fill="#4FC3F7"/>`;
-            svg += `<line x1="35" y1="36" x2="45" y2="36" stroke="#4FC3F7" stroke-width="1.5"/>`;
+            // 默认：中性
+            svg += `<circle cx="50" cy="44" r="4" fill="#4FC3F7"/>`;
+            svg += `<circle cx="70" cy="44" r="4" fill="#4FC3F7"/>`;
+            svg += `<line x1="50" y1="54" x2="70" y2="54" stroke="#4FC3F7" stroke-width="2"/>`;
+            svg += `<path d="M38,88 Q32,104 32,120" fill="none" stroke="#E8E5F5" stroke-width="8" stroke-linecap="round"/>`;
+            svg += `<path d="M82,88 Q88,104 88,120" fill="none" stroke="#E8E5F5" stroke-width="8" stroke-linecap="round"/>`;
         }
         // 身体
-        svg += `<rect x="26" y="52" width="28" height="25" rx="4" fill="#4A3F8E"/>`;
-        svg += `<circle cx="34" cy="64" r="2" fill="#FFB84D"/>`;
-        svg += `<circle cx="40" cy="64" r="2" fill="#5FC9A8"/>`;
-        svg += `<circle cx="46" cy="64" r="2" fill="#FF6B9D"/>`;
+        svg += `<rect x="36" y="78" width="48" height="40" rx="6" fill="#4A3F8E"/>`;
+        svg += `<circle cx="48" cy="96" r="3" fill="#FFB84D"/>`;
+        svg += `<circle cx="60" cy="96" r="3" fill="#5FC9A8"/>`;
+        svg += `<circle cx="72" cy="96" r="3" fill="#FF6B9D"/>`;
     }
 
     svg += `</svg>`;

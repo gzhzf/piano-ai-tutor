@@ -194,12 +194,12 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 .comic-panel-header { display:flex; align-items:center; gap:8px; padding:4px 10px; }
 .comic-panel-num { background:rgba(255,255,255,0.3); color:var(--white); font-size:11px; font-weight:700; padding:1px 7px; border-radius:8px; }
 .comic-action { color:var(--white); font-size:11px; font-weight:600; }
-/* 人物+对话区 */
-.comic-scene-wrap { display:flex; align-items:flex-start; gap:8px; padding:10px; background:var(--white); }
-.comic-char-svg { width:60px; height:68px; flex-shrink:0; }
+/* 人物+对话区：人物大图在上，对话在下 */
+.comic-scene-wrap { display:flex; flex-direction:column; align-items:center; padding:10px; background:var(--white); gap:6px; }
+.comic-char-svg { width:110px; height:128px; flex-shrink:0; }
 /* 对话气泡 */
-.comic-dialogue { flex:1; position:relative; background:var(--soft-purple); border-radius:12px; padding:8px 12px; min-height:40px; }
-.comic-dialogue::before { content:""; position:absolute; left:-6px; top:14px; width:0; height:0; border-style:solid; border-width:6px 8px 6px 0; border-color:transparent var(--soft-purple) transparent transparent; }
+.comic-dialogue { position:relative; background:var(--soft-purple); border-radius:12px; padding:8px 14px; width:100%; text-align:center; }
+.comic-dialogue::before { content:""; position:absolute; top:-6px; left:50%; transform:translateX(-50%); width:0; height:0; border-style:solid; border-width:0 6px 7px 6px; border-color:transparent transparent var(--soft-purple) transparent; }
 .comic-speaker-name { font-size:11px; font-weight:700; margin-bottom:3px; }
 .comic-speaker-teacher .comic-speaker-name { color:var(--pink); }
 .comic-speaker-student .comic-speaker-name { color:var(--sky); }
@@ -263,7 +263,7 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
     .help-body { padding:14px; }
 
     /* 漫画手机端 */
-    .comic-char-svg { width:50px; height:56px; }
+    .comic-char-svg { width:85px; height:100px; }
     .comic-dialogue { padding:6px 10px; }
     .comic-dialogue-text { font-size:12px; }
 }
