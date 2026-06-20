@@ -128,12 +128,18 @@ def classify_intent(message):
 
 
 def _match_sub(msg, intent):
-    """子意图匹配"""
+    """子意图匹配 — 更具体的key优先匹配"""
     config = INTENT_KEYWORDS.get(intent, {})
+    # 收集所有匹配，按关键词长度降序（更具体的优先）
+    matches = []
     for sub, keywords in config.get("sub_keys", {}).items():
         for kw in keywords:
             if kw in msg:
-                return sub
+                matches.append((len(kw), sub))
+                break
+    if matches:
+        matches.sort(key=lambda x: -x[0])  # 关键词越长越优先
+        return matches[0][1]
     return None
 
 
