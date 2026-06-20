@@ -4,7 +4,7 @@ let isTyping = false;
 
 const chatMessages = document.getElementById("chatMessages");
 
-// ===== 欢迎页钢琴动画（克劳德·暗色调唯美风）=====
+// ===== 欢迎页钢琴动画（图片+粒子叠加）=====
 let welcomeAnimStarted = false;
 function initWelcomeAnim() {
     const cv = document.getElementById("welcomeCanvas");
@@ -13,215 +13,61 @@ function initWelcomeAnim() {
     const ctx = cv.getContext("2d");
     const W = cv.width, H = cv.height;
 
-    const headR = 13;
-    const pianoX = 70, pianoY = 240, pianoW = 340, pianoH = 42;
-    const wkW = 21, numWhite = 15, bkW = 13, bkH = 24;
-    const keyY = pianoY + 16;
-    const charCx = 145, charHeadY = 95;
-    const shoulderW = 40, torsoH = 52;
-
-    // 花瓣
-    const petals = [];
-    for (let i = 0; i < 15; i++) petals.push({
-        x: Math.random()*W, y: Math.random()*H*0.5, vx: Math.random()*0.4-0.15,
-        vy: Math.random()*0.25+0.08, rot: Math.random()*6.28, rotSpeed: 0.015,
-        size: Math.random()*3+2.5, alpha: Math.random()*0.4+0.3,
-        color: ["#C8B8E0","#D8C8F0","#B8A8D8","#E0D0F0"][i%4]
-    });
     // 星光
     const stars = [];
-    for (let i = 0; i < 40; i++) stars.push({
-        x: Math.random()*W, y: Math.random()*H*0.5, r: Math.random()*1.2+0.3,
-        tw: Math.random()*6.28, sp: Math.random()*0.025+0.008
+    for (let i = 0; i < 30; i++) stars.push({
+        x: Math.random()*W, y: Math.random()*H*0.5,
+        r: Math.random()*1.2+0.3, tw: Math.random()*6.28, sp: Math.random()*0.02+0.008
     });
-    const musicNotes = [], ripples = [];
+    // 音符粒子
+    const musicNotes = [];
     const noteSyms = ["\u266A","\u266B","\u2669","\u266C"];
-    // Aerith's Theme旋律 (D大调, BPM72, 植松伸夫)
-        // 开头标志旋律: D5-E5-F5-E5-D5-B4-A4 上升再下降抒情
-        const melody = [
-            {k:7,n:"D5",d:1.5},{k:8,n:"E5",d:0.5},{k:9,n:"F5",d:1},{k:8,n:"E5",d:1},
-            {k:7,n:"D5",d:1.5},{k:5,n:"B4",d:0.5},{k:4,n:"A4",d:2},
-            {k:7,n:"D5",d:1},{k:8,n:"E5",d:1},{k:9,n:"F5",d:1.5},{k:8,n:"E5",d:0.5},
-            {k:7,n:"D5",d:1},{k:8,n:"E5",d:1},{k:9,n:"F5",d:1},{k:10,n:"G5",d:2},
-            {k:9,n:"F5",d:1.5},{k:8,n:"E5",d:0.5},{k:7,n:"D5",d:1},{k:8,n:"E5",d:1},
-            {k:7,n:"D5",d:1.5},{k:5,n:"B4",d:0.5},{k:4,n:"A4",d:3},
-        ];
-    let mIdx = 0, lastBeat = 0, isPlaying = true, blinkT = 0, blink = false, frame = 0, swayP = 0;
+    const ripples = [];
+    // 原有旋律（Aerith's Theme）
+    const melody = [
+        {n:"D5",d:1.5},{n:"E5",d:0.5},{n:"F5",d:1},{n:"E5",d:1},
+        {n:"D5",d:1.5},{n:"B4",d:0.5},{n:"A4",d:2},
+        {n:"D5",d:1},{n:"E5",d:1},{n:"F5",d:1.5},{n:"E5",d:0.5},
+        {n:"D5",d:1},{n:"E5",d:1},{n:"F5",d:1},{n:"G5",d:2},
+        {n:"F5",d:1.5},{n:"E5",d:0.5},{n:"D5",d:1},{n:"E5",d:1},
+        {n:"D5",d:1.5},{n:"B4",d:0.5},{n:"A4",d:3},
+    ];
+    let mIdx = 0, lastBeat = 0, isPlaying = true, frame = 0;
     const beatInt = 36, playDur = 600;
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        // 暗紫蓝渐变天空（参考图1暗色调）
-        const sg = ctx.createLinearGradient(0,0,0,H);
-        sg.addColorStop(0,"#0a0a1a"); sg.addColorStop(0.3,"#1a1430"); sg.addColorStop(0.6,"#2a1a48"); sg.addColorStop(1,"#1a0a28");
-        ctx.fillStyle = sg; ctx.fillRect(0,0,W,H);
+        // 半透明黑色蒙版（让粒子叠加在图片上）
+        ctx.fillStyle = "rgba(5,5,15,0.15)";
+        ctx.fillRect(0, 0, W, H);
         // 星光
-        stars.forEach(s=>{s.tw+=s.sp; const a=0.2+0.6*Math.abs(Math.sin(s.tw));
-            ctx.fillStyle=`rgba(200,210,255,${a})`; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.28); ctx.fill();
-            if(s.r>0.9){ctx.strokeStyle=`rgba(200,210,255,${a*0.4})`; ctx.lineWidth=0.4;
+        stars.forEach(s=>{s.tw+=s.sp; const a=0.3+0.5*Math.abs(Math.sin(s.tw));
+            ctx.fillStyle=`rgba(200,210,255,${a})`;
+            ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.28); ctx.fill();
+            if(s.r>0.9){ctx.strokeStyle=`rgba(200,210,255,${a*0.3})`; ctx.lineWidth=0.4;
                 ctx.beginPath(); ctx.moveTo(s.x-s.r*3,s.y); ctx.lineTo(s.x+s.r*3,s.y);
                 ctx.moveTo(s.x,s.y-s.r*3); ctx.lineTo(s.x,s.y+s.r*3); ctx.stroke();}});
-        // 月光（参考图1蓝调光源）
-        const mx=W*0.8, my=H*0.2;
-        const mg = ctx.createRadialGradient(mx,my,5,mx,my,60);
-        mg.addColorStop(0,"rgba(100,150,255,0.3)"); mg.addColorStop(1,"rgba(100,150,255,0)");
-        ctx.fillStyle = mg; ctx.fillRect(mx-80,my-80,160,160);
-        // 远山剪影
-        ctx.fillStyle="rgba(15,10,25,0.8)"; ctx.beginPath();
-        ctx.moveTo(0,H*0.6); ctx.lineTo(50,H*0.45); ctx.lineTo(130,H*0.52);
-        ctx.lineTo(210,H*0.42); ctx.lineTo(300,H*0.5); ctx.lineTo(380,H*0.44);
-        ctx.lineTo(W,H*0.52); ctx.lineTo(W,H*0.7); ctx.lineTo(0,H*0.7); ctx.fill();
-        // 水面/地面反光（参考图1蓝调反射）
-        const rg = ctx.createLinearGradient(0,H*0.6,0,H);
-        rg.addColorStop(0,"rgba(30,40,80,0.6)"); rg.addColorStop(0.5,"rgba(20,25,55,0.4)"); rg.addColorStop(1,"rgba(10,10,25,0.8)");
-        ctx.fillStyle = rg; ctx.fillRect(0,H*0.6,W,H*0.4);
-        // 水面波纹
-        ctx.strokeStyle="rgba(80,120,200,0.1)"; ctx.lineWidth=0.5;
-        for(let i=0;i<5;i++){const wy=H*0.65+i*12+Math.sin(frame*0.02+i)*2;
-            ctx.beginPath(); ctx.moveTo(0,wy); ctx.lineTo(W,wy); ctx.stroke();}
-        // 花瓣
-        petals.forEach(p=>{p.x+=p.vx+Math.sin(frame*0.015+p.rot)*0.2; p.y+=p.vy; p.rot+=p.rotSpeed;
-            if(p.y>H){p.y=-3;p.x=Math.random()*W;}
-            ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
-            ctx.fillStyle=p.color; ctx.globalAlpha=p.alpha;
-            ctx.beginPath(); ctx.ellipse(0,0,p.size,p.size*0.5,0,0,6.28); ctx.fill(); ctx.restore();});
-        ctx.globalAlpha=1;
         // 涟漪
         for(let i=ripples.length-1;i>=0;i--){const r=ripples[i]; r.radius+=1.5; r.alpha-=0.015;
             if(r.alpha<=0){ripples.splice(i,1);continue;}
-            ctx.strokeStyle=`rgba(120,180,255,${r.alpha})`; ctx.lineWidth=1;
+            ctx.strokeStyle=`rgba(127,196,255,${r.alpha})`; ctx.lineWidth=1;
             ctx.beginPath(); ctx.arc(r.x,r.y,r.radius,0,6.28); ctx.stroke();}
-        // 钢琴（暗色调，参考图1深色）
-        ctx.fillStyle="#050308"; ctx.beginPath();
-        ctx.moveTo(pianoX,pianoY+pianoH); ctx.lineTo(pianoX+pianoW,pianoY+pianoH);
-        ctx.lineTo(pianoX+pianoW-6,pianoY); ctx.lineTo(pianoX+20,pianoY); ctx.lineTo(pianoX,pianoY+12); ctx.fill();
-        // 钢琴顶面蓝光反射
-        const pg=ctx.createLinearGradient(pianoX,pianoY,pianoX,pianoY+16);
-        pg.addColorStop(0,"rgba(60,90,160,0.3)"); pg.addColorStop(1,"rgba(20,15,35,0)");
-        ctx.fillStyle=pg; ctx.fillRect(pianoX+20,pianoY,pianoW-26,16);
-        // 琴键
-        for(let i=0;i<numWhite;i++){const kx=pianoX+20+i*wkW;
-            const act=isPlaying&&mIdx>0&&melody[(mIdx-1)%melody.length].k===i&&frame-lastBeat<8;
-            ctx.fillStyle=act?"#7FC4FF":"#E8E5F0"; ctx.fillRect(kx,keyY,wkW-1,pianoH-16);
-            ctx.strokeStyle="#666"; ctx.lineWidth=0.3; ctx.strokeRect(kx,keyY,wkW-1,pianoH-16);}
-        const bp=[0,1,3,4,5];
-        for(let o=0;o<3;o++)for(const b of bp){const idx=o*7+b; if(idx<numWhite-1){ctx.fillStyle="#080810";
-            ctx.fillRect(pianoX+20+idx*wkW+wkW*0.65,keyY,bkW,bkH);}}
-        ctx.fillStyle="#050308"; ctx.fillRect(pianoX+15,pianoY+pianoH,4,28); ctx.fillRect(pianoX+pianoW-25,pianoY+pianoH,4,28);
-        // 琴凳
-        ctx.fillStyle="#0a0510"; ctx.fillRect(charCx-16,pianoY+pianoH+20,36,8);
-        ctx.fillRect(charCx-13,pianoY+pianoH+28,3,16); ctx.fillRect(charCx+16,pianoY+pianoH+28,3,16);
-        // ===== 克劳德 =====
-        swayP+=0.025; const sway=isPlaying?Math.sin(swayP)*1.5:0;
-        const headY=charHeadY+sway, neckY=headY+headR+1, shY=neckY+5, hipY=shY+torsoH;
-        const shL=charCx-shoulderW/2, shR=charCx+shoulderW/2;
-        // --- 金色头发（参考图2金色像素 #E0A050~#F0C060）---
-        // 后脑勺
-        ctx.fillStyle="#B8902A"; ctx.beginPath(); ctx.arc(charCx,headY,headR+1,0.7*3.14,2.3*3.14); ctx.fill();
-        // 尖刺（更粗更利，参考克劳德标志性发型）
-        const spikes=[
-            {dx:-11,dy:-5,len:15,a:-0.4},{dx:-7,dy:-11,len:18,a:-0.15},
-            {dx:-2,dy:-13,len:20,a:0.02},{dx:3,dy:-13,len:19,a:0.12},
-            {dx:8,dy:-11,len:16,a:0.35},{dx:11,dy:-6,len:13,a:0.55},
-            {dx:-13,dy:-1,len:11,a:-0.7},{dx:13,dy:-1,len:10,a:0.7},
-            {dx:-5,dy:-12,len:16,a:-0.05},{dx:5,dy:-12,len:17,a:0.08},
-        ];
-        ctx.fillStyle="#E8B840";
-        spikes.forEach(sp=>{ctx.save(); ctx.translate(charCx+sp.dx,headY+sp.dy); ctx.rotate(sp.a);
-            ctx.beginPath(); ctx.moveTo(-2.5,0); ctx.lineTo(0,-sp.len); ctx.lineTo(2.5,0); ctx.fill(); ctx.restore();});
-        // 头发高光（金色亮部）
-        ctx.fillStyle="rgba(255,230,120,0.5)"; ctx.beginPath(); ctx.arc(charCx-3,headY-7,3.5,0,6.28); ctx.fill();
-        ctx.fillStyle="rgba(255,210,80,0.3)"; ctx.beginPath(); ctx.arc(charCx+4,headY-5,3,0,6.28); ctx.fill();
-        // --- 脸部 ---
-        ctx.fillStyle="#E8D0B0"; ctx.beginPath(); ctx.arc(charCx,headY,headR,0,6.28); ctx.fill();
-        // 脸部阴影（暗光环境）
-        ctx.fillStyle="rgba(80,60,100,0.15)"; ctx.beginPath(); ctx.arc(charCx-4,headY+2,headR-3,0,6.28); ctx.fill();
-        // --- 魔晄蓝眼睛（参考图1蓝色发光 #4A7BBF）---
-        blinkT++; if(blinkT>100+Math.random()*80){blink=true;blinkT=0;} if(blink&&blinkT>4)blink=false;
-        if(!blink){
-            // 眼白发光（魔晄特征）
-            ctx.fillStyle="rgba(100,180,255,0.3)";
-            ctx.beginPath(); ctx.arc(charCx-5,headY-1,3.5,0,6.28); ctx.fill();
-            ctx.beginPath(); ctx.arc(charCx+5,headY-1,3.5,0,6.28); ctx.fill();
-            // 虹膜（亮蓝）
-            ctx.fillStyle="#5BB0F5"; ctx.beginPath(); ctx.arc(charCx-5,headY-1,2,0,6.28); ctx.fill();
-            ctx.beginPath(); ctx.arc(charCx+5,headY-1,2,0,6.28); ctx.fill();
-            // 瞳孔
-            ctx.fillStyle="#1a2a4a"; ctx.beginPath(); ctx.arc(charCx-5,headY-1,0.9,0,6.28); ctx.fill();
-            ctx.beginPath(); ctx.arc(charCx+5,headY-1,0.9,0,6.28); ctx.fill();
-            // 高光（魔晄发光感）
-            ctx.fillStyle="rgba(200,230,255,0.9)";
-            ctx.beginPath(); ctx.arc(charCx-4,headY-2,0.7,0,6.28); ctx.fill();
-            ctx.beginPath(); ctx.arc(charCx+6,headY-2,0.7,0,6.28); ctx.fill();
-        }else{
-            ctx.strokeStyle="#3a3a5a"; ctx.lineWidth=1;
-            ctx.beginPath(); ctx.arc(charCx-5,headY-1,1.8,0.1,3.04); ctx.stroke();
-            ctx.beginPath(); ctx.arc(charCx+5,headY-1,1.8,0.1,3.04); ctx.stroke();
-        }
-        // 鼻
-        ctx.fillStyle="#C8A888"; ctx.beginPath();
-        ctx.moveTo(charCx,headY+2); ctx.lineTo(charCx+1.5,headY+4); ctx.lineTo(charCx,headY+5); ctx.fill();
-        // 嘴
-        ctx.strokeStyle="#804040"; ctx.lineWidth=0.7; ctx.beginPath();
-        ctx.moveTo(charCx-1.5,headY+8); ctx.lineTo(charCx+1.5,headY+8); ctx.stroke();
-        // --- 脖子 ---
-        ctx.fillStyle="#D8C0A0"; ctx.fillRect(charCx-3.5,neckY-1,7,7);
-        ctx.fillStyle="rgba(60,40,80,0.1)"; ctx.fillRect(charCx-3.5,neckY-1,7,7);
-        // --- 左肩甲（金属，参考图2深色金属肩甲）---
-        ctx.fillStyle="#3a3a4a"; ctx.beginPath(); ctx.ellipse(shL-1,shY+2,11,9,-0.15,0,6.28); ctx.fill();
-        ctx.fillStyle="rgba(100,120,160,0.3)"; ctx.beginPath(); ctx.ellipse(shL-3,shY,5,3.5,-0.15,0,6.28); ctx.fill();
-        ctx.strokeStyle="#2a2a3a"; ctx.lineWidth=0.8; ctx.beginPath(); ctx.ellipse(shL-1,shY+2,11,9,-0.15,0,6.28); ctx.stroke();
-        // --- 上身（深蓝黑SOLDIER制服，参考图1/2深色调）---
-        ctx.fillStyle="#1a1525"; ctx.beginPath();
-        ctx.moveTo(shL-5,shY); ctx.lineTo(shR+5,shY); ctx.lineTo(shR+3,hipY); ctx.lineTo(shL-3,hipY); ctx.fill();
-        // 制服中线
-        ctx.strokeStyle="#0a0510"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(charCx,shY+3); ctx.lineTo(charCx,hipY); ctx.stroke();
-        // 腰带
-        ctx.fillStyle="#3a3020"; ctx.fillRect(shL-1,hipY-8,shoulderW+2,4);
-        ctx.fillStyle="#6a5a3a"; ctx.fillRect(charCx-2.5,hipY-8,5,4);
-        // 制服蓝光反射（参考图1蓝色环境光）
-        ctx.fillStyle="rgba(50,80,140,0.12)"; ctx.fillRect(shR-4,shY+4,8,torsoH-14);
-        // --- 手臂（2.3头高精确比例）---
-        const hk=isPlaying&&mIdx>0?melody[(mIdx-1)%melody.length].k:6;
-        const hx=pianoX+20+hk*wkW+wkW/2, hy=keyY+2;
-        const ex=charCx+6, ey=shY+26;
-        // 上臂（深蓝制服色）
-        ctx.strokeStyle="#1a1525"; ctx.lineWidth=6; ctx.lineCap="round";
-        ctx.beginPath(); ctx.moveTo(shL,shY+3); ctx.lineTo(ex-5,ey); ctx.lineTo(hx-7,hy); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(shR,shY+3); ctx.lineTo(ex+7,ey); ctx.lineTo(hx+7,hy); ctx.stroke();
-        // 前臂（黑色手套+护臂）
-        ctx.strokeStyle="#0a0a0a"; ctx.lineWidth=6;
-        ctx.beginPath(); ctx.moveTo(ex-5,ey); ctx.lineTo(hx-7,hy); ctx.moveTo(ex+7,ey); ctx.lineTo(hx+7,hy); ctx.stroke();
-        // 手
-        ctx.fillStyle="#0a0a0a"; ctx.beginPath(); ctx.arc(hx-7,hy,3,0,6.28); ctx.fill();
-        ctx.beginPath(); ctx.arc(hx+7,hy,3,0,6.28); ctx.fill();
-        // 触键光效
-        if(isPlaying&&frame-lastBeat<8){ctx.strokeStyle="rgba(127,196,255,0.8)"; ctx.lineWidth=0.8;
-            ctx.beginPath(); ctx.arc(hx-7,hy,5,0,6.28); ctx.stroke();
-            ctx.beginPath(); ctx.arc(hx+7,hy,5,0,6.28); ctx.stroke();}
-        // --- 腿（坐姿）---
-        ctx.fillStyle="#1a1525"; ctx.beginPath();
-        ctx.moveTo(charCx-7,hipY); ctx.lineTo(charCx+4,hipY); ctx.lineTo(charCx+7,hipY+32); ctx.lineTo(charCx-4,hipY+32); ctx.fill();
-        ctx.fillStyle="#0a0a0a"; ctx.fillRect(charCx-5,hipY+30,12,6);
-        // ===== 触键+音符 =====
-        if(isPlaying&&frame-lastBeat>=(melody[mIdx%melody.length].d||1)*beatInt){lastBeat=frame; const n=melody[mIdx%melody.length]; const nd=n.d||1;
-            const kx=pianoX+20+n.k*wkW+wkW/2;
-            ripples.push({x:kx,y:keyY,radius:3,alpha:0.4});
-            musicNotes.push({x:kx,y:keyY-6,vx:(Math.random()-0.3)*1,vy:-Math.random()*1.5-0.7,life:1,
-                sym:noteSyms[Math.floor(Math.random()*4)],sz:Math.random()*3+8,
+        // 触键
+        if(isPlaying&&frame-lastBeat>=(melody[mIdx%melody.length].d||1)*beatInt){
+            lastBeat=frame; const n=melody[mIdx%melody.length]; const nd=n.d||1;
+            const rx=W*0.35+(Math.random()-0.5)*60, ry=H*0.75;
+            ripples.push({x:rx,y:ry,radius:3,alpha:0.4});
+            musicNotes.push({x:rx,y:ry,vx:(Math.random()-0.3)*1,vy:-Math.random()*1.5-0.7,
+                life:1,sym:noteSyms[Math.floor(Math.random()*4)],sz:Math.random()*3+8,
                 c:["#7FC4FF","#FFD700","#FF9DB5","#A8D8FF"][Math.floor(Math.random()*4)]});
             playNote(NOTE_FREQ[n.n]||261.63,Math.min(nd*0.4,1.5),0.1); mIdx++;}
         if(isPlaying&&frame>=playDur)isPlaying=false;
         // 音符飘起
-        for(let i=musicNotes.length-1;i>=0;i--){const p=musicNotes[i]; p.x+=p.vx; p.y+=p.vy; p.vy*=0.99; p.life-=0.009;
+        for(let i=musicNotes.length-1;i>=0;i--){const p=musicNotes[i]; p.x+=p.vx; p.y+=p.vy; p.vy*=0.99; p.life-=0.008;
             if(p.life<=0){musicNotes.splice(i,1);continue;}
-            ctx.fillStyle=p.c; ctx.globalAlpha=p.life*0.7;
+            ctx.fillStyle=p.c; ctx.globalAlpha=p.life*0.8;
             ctx.font=p.sz+"px sans-serif"; ctx.textAlign="center";
             ctx.fillText(String.fromCharCode(parseInt(p.sym.replace("\\u",""),16)),p.x,p.y); ctx.globalAlpha=1;}
-        // 全局蓝光氛围
-        const ag = ctx.createRadialGradient(W*0.5,H*0.4,50,W*0.5,H*0.4,W*0.8);
-        ag.addColorStop(0,"rgba(40,60,120,0.04)"); ag.addColorStop(1,"rgba(0,0,20,0.1)");
-        ctx.fillStyle = ag; ctx.fillRect(0,0,W,H);
         frame++; requestAnimationFrame(draw);
     }
     draw();
