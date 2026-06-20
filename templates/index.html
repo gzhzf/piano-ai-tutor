@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>🎹 琴乐启蒙AI导师</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -12,6 +14,7 @@
     <!-- ========== 顶部导航栏 ========== -->
     <header class="topbar">
         <div class="topbar-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
             <span class="logo">🎹</span>
             <div class="title-box">
                 <span class="title">琴乐启蒙AI导师</span>
@@ -20,27 +23,31 @@
         </div>
         <div class="topbar-center">
             <nav class="view-tabs">
-                <button class="tab-btn active" data-view="chat">💬 智能对话</button>
-                <button class="tab-btn" data-view="dashboard">📊 学情驾驶舱</button>
-                <button class="tab-btn" data-view="workflow">⚙️ 工作流演示</button>
+                <button class="tab-btn active" data-view="chat">💬 对话</button>
+                <button class="tab-btn" data-view="dashboard">📊 驾驶舱</button>
+                <button class="tab-btn" data-view="workflow">⚙️ 工作流</button>
+                <button class="tab-btn" data-view="library">📚 教案库</button>
             </nav>
         </div>
         <div class="topbar-right">
             <div class="role-switch">
-                <button class="role-btn active" data-role="teacher">👨‍🏫 教师</button>
-                <button class="role-btn" data-role="parent">🏠 家长</button>
-                <button class="role-btn" data-role="student">🧒 学生</button>
+                <button class="role-btn active" data-role="teacher">👨‍🏫</button>
+                <button class="role-btn" data-role="parent">🏠</button>
+                <button class="role-btn" data-role="student">🧒</button>
             </div>
             <span class="status"><span class="dot"></span>在线</span>
         </div>
     </header>
+
+    <!-- 移动端遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <main class="main-content">
 
         <!-- ========== 视图1：智能对话 ========== -->
         <div class="view view-chat active" id="view-chat">
             <!-- 左侧栏 -->
-            <aside class="sidebar">
+            <aside class="sidebar" id="sidebar">
                 <div class="sidebar-title">七大智能助手</div>
                 {% for a in assistants %}
                 <div class="assistant-item" data-assistant="{{ a.id }}">
@@ -54,7 +61,7 @@
                 <div class="kb-badge">
                     <span>📚</span>
                     <div>
-                        <div style="font-weight:600;font-size:12px">四级知识库已加载</div>
+                        <div style="font-weight:600;font-size:12px">30首曲目库已加载</div>
                         <div style="font-size:10px;color:#999">RAG检索增强生成</div>
                     </div>
                 </div>
@@ -66,19 +73,19 @@
                     <div class="welcome-msg">
                         <div class="welcome-icon">🎹</div>
                         <h2>欢迎使用琴乐启蒙AI导师</h2>
-                        <p>我是基于腾讯元器平台的钢琴启蒙智能体，可以帮教师设计课程、帮家长科学陪练、帮学生趣味学琴</p>
-                        <p style="font-size:13px;color:#999;margin-top:8px">请选择左侧助手，或直接输入您的问题开始对话</p>
+                        <p>基于腾讯元器平台的钢琴启蒙智能体<br>帮教师设计课程 · 帮家长科学陪练 · 帮学生趣味学琴</p>
+                        <p style="font-size:13px;color:#999;margin-top:8px">点击下方问题或直接输入开始对话</p>
                     </div>
                 </div>
 
-                <!-- 快捷问题 -->
+                <!-- 快捷问题（分类） -->
                 <div class="quick-questions" id="quickQuestions"></div>
 
                 <!-- 输入区 -->
                 <div class="chat-input-area">
                     <div class="chat-input-box">
-                        <textarea id="chatInput" placeholder="输入您的问题，按回车发送..." rows="1"></textarea>
-                        <button id="sendBtn" class="send-btn">发送 ➤</button>
+                        <textarea id="chatInput" placeholder="输入问题，回车发送..." rows="1"></textarea>
+                        <button id="sendBtn" class="send-btn">发送</button>
                     </div>
                 </div>
             </section>
@@ -96,20 +103,16 @@
                 </div>
                 <div class="dash-rating">综合评级 {{ dashboard.student.rating }}</div>
             </div>
-
             <div class="dashboard-grid">
-                <!-- 左列：三个环形图 -->
                 <div class="dash-col dash-col-charts">
                     <div class="dash-card"><img src="{{ dashboard.charts.rhythm }}" alt="节奏"></div>
                     <div class="dash-card"><img src="{{ dashboard.charts.pitch }}" alt="音准"></div>
                     <div class="dash-card"><img src="{{ dashboard.charts.hand }}" alt="手型"></div>
                 </div>
-                <!-- 中列：趋势图 -->
                 <div class="dash-col">
                     <div class="dash-card dash-card-wide"><img src="{{ dashboard.charts.errors }}" alt="错音率"></div>
                     <div class="dash-card dash-card-wide"><img src="{{ dashboard.charts.minutes }}" alt="练习时长"></div>
                 </div>
-                <!-- 右列：雷达图 + AI诊断 -->
                 <div class="dash-col">
                     <div class="dash-card"><img src="{{ dashboard.charts.radar }}" alt="雷达图"></div>
                     <div class="dash-card dash-diagnosis">
@@ -130,7 +133,6 @@
                 <h2>⚙️ 教案自动生成工作流</h2>
                 <p>输入教学要素，AI五步自动生成完整教案</p>
             </div>
-
             <div class="wf-input-panel">
                 <div class="wf-input-group">
                     <label>年级</label>
@@ -142,11 +144,7 @@
                 </div>
                 <div class="wf-input-group">
                     <label>教学内容</label>
-                    <select id="wfContent">
-                        <option value="中央C">中央C</option>
-                        <option value="节奏">节奏训练</option>
-                        <option value="小星星">《小星星》</option>
-                    </select>
+                    <select id="wfContent"></select>
                 </div>
                 <div class="wf-input-group">
                     <label>时长（分钟）</label>
@@ -154,9 +152,22 @@
                 </div>
                 <button id="wfRunBtn" class="wf-run-btn">▶ 开始生成</button>
             </div>
-
             <div class="wf-flow" id="wfFlow">
                 <div class="wf-placeholder">点击「开始生成」体验AI工作流引擎</div>
+            </div>
+        </div>
+
+        <!-- ========== 视图4：教案库 ========== -->
+        <div class="view view-library" id="view-library">
+            <div class="lib-intro">
+                <h2>📚 曲目教案库</h2>
+                <p>30首6-9岁儿童钢琴曲目 · 按难度分级 · 点击即生成教案</p>
+            </div>
+            <div class="lib-search">
+                <input type="text" id="libSearch" placeholder="搜索曲目名称..." class="lib-search-input">
+            </div>
+            <div class="lib-grid" id="libGrid">
+                <div class="lib-loading">加载中...</div>
             </div>
         </div>
 

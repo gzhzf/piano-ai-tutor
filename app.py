@@ -150,6 +150,29 @@ def repertoire_search():
     return jsonify({"query": q, "count": len(results), "results": results})
 
 
+@app.route("/api/lesson-plans")
+def lesson_plans():
+    """教案列表 — 按难度分组的可选教案"""
+    from engine.repertoire import ALL_REPERTOIRE, LEVEL_INDEX
+    groups = []
+    level_labels = {"零基础": "零基础入门", "预备级": "预备级", "1级": "1级基础", "2级": "2级进阶", "3级": "3级提升"}
+    for level, names in LEVEL_INDEX.items():
+        pieces = []
+        for name in names:
+            if name in ALL_REPERTOIRE:
+                info = ALL_REPERTOIRE[name]
+                pieces.append({
+                    "name": name,
+                    "difficulty": info.get("难度", ""),
+                    "key": info.get("调性", ""),
+                    "time_sig": info.get("拍号", ""),
+                    "tomplay": info.get("Tomplay功能", "")
+                })
+        if pieces:
+            groups.append({"level": level, "label": level_labels.get(level, level), "pieces": pieces})
+    return jsonify({"groups": groups, "total": len(ALL_REPERTOIRE)})
+
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
