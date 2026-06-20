@@ -36,9 +36,18 @@ function initWelcomeAnim() {
     });
     const musicNotes = [], ripples = [];
     const noteSyms = ["\u266A","\u266B","\u2669","\u266C"];
-    const melody = [{k:4,n:"C4"},{k:6,n:"D4"},{k:8,n:"E4"},{k:10,n:"F4"},{k:12,n:"G4"},{k:10,n:"F4"},{k:8,n:"E4"},{k:6,n:"D4"},{k:4,n:"C4"}];
+    // Aerith's Theme旋律 (D大调, BPM72, 植松伸夫)
+        // 开头标志旋律: D5-E5-F5-E5-D5-B4-A4 上升再下降抒情
+        const melody = [
+            {k:7,n:"D5",d:1.5},{k:8,n:"E5",d:0.5},{k:9,n:"F5",d:1},{k:8,n:"E5",d:1},
+            {k:7,n:"D5",d:1.5},{k:5,n:"B4",d:0.5},{k:4,n:"A4",d:2},
+            {k:7,n:"D5",d:1},{k:8,n:"E5",d:1},{k:9,n:"F5",d:1.5},{k:8,n:"E5",d:0.5},
+            {k:7,n:"D5",d:1},{k:8,n:"E5",d:1},{k:9,n:"F5",d:1},{k:10,n:"G5",d:2},
+            {k:9,n:"F5",d:1.5},{k:8,n:"E5",d:0.5},{k:7,n:"D5",d:1},{k:8,n:"E5",d:1},
+            {k:7,n:"D5",d:1.5},{k:5,n:"B4",d:0.5},{k:4,n:"A4",d:3},
+        ];
     let mIdx = 0, lastBeat = 0, isPlaying = true, blinkT = 0, blink = false, frame = 0, swayP = 0;
-    const beatInt = 30, playDur = 270;
+    const beatInt = 36, playDur = 600;
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
@@ -195,13 +204,13 @@ function initWelcomeAnim() {
         ctx.moveTo(charCx-7,hipY); ctx.lineTo(charCx+4,hipY); ctx.lineTo(charCx+7,hipY+32); ctx.lineTo(charCx-4,hipY+32); ctx.fill();
         ctx.fillStyle="#0a0a0a"; ctx.fillRect(charCx-5,hipY+30,12,6);
         // ===== 触键+音符 =====
-        if(isPlaying&&frame-lastBeat>=beatInt){lastBeat=frame; const n=melody[mIdx%melody.length];
+        if(isPlaying&&frame-lastBeat>=(melody[mIdx%melody.length].d||1)*beatInt){lastBeat=frame; const n=melody[mIdx%melody.length]; const nd=n.d||1;
             const kx=pianoX+20+n.k*wkW+wkW/2;
             ripples.push({x:kx,y:keyY,radius:3,alpha:0.4});
             musicNotes.push({x:kx,y:keyY-6,vx:(Math.random()-0.3)*1,vy:-Math.random()*1.5-0.7,life:1,
                 sym:noteSyms[Math.floor(Math.random()*4)],sz:Math.random()*3+8,
                 c:["#7FC4FF","#FFD700","#FF9DB5","#A8D8FF"][Math.floor(Math.random()*4)]});
-            playNote(NOTE_FREQ[n.n]||261.63,0.35,0.1); mIdx++;}
+            playNote(NOTE_FREQ[n.n]||261.63,Math.min(nd*0.4,1.5),0.1); mIdx++;}
         if(isPlaying&&frame>=playDur)isPlaying=false;
         // 音符飘起
         for(let i=musicNotes.length-1;i>=0;i--){const p=musicNotes[i]; p.x+=p.vx; p.y+=p.vy; p.vy*=0.99; p.life-=0.009;
@@ -1099,7 +1108,7 @@ function playNote(freq, dur = 0.5, vol = 0.3) {
     osc.start(t); osc.stop(t + dur);
 }
 // 钢琴频率（中央C=261.63Hz）
-const NOTE_FREQ = { "C4":261.63, "C#4":277.18, "D4":293.66, "D#4":311.13, "E4":329.63, "F4":349.23, "F#4":369.99, "G4":392.00, "G#4":415.30, "A4":440.00, "A#4":466.16, "B4":493.88, "C5":523.25, "C#5":554.37, "D5":587.33, "D#5":622.25, "E5":659.25, "F5":698.46 };
+const NOTE_FREQ = { "C4":261.63, "C#4":277.18, "D4":293.66, "D#4":311.13, "E4":329.63, "F4":349.23, "F#4":369.99, "G4":392.00, "G#4":415.30, "A4":440.00, "A#4":466.16, "B4":493.88, "C5":523.25, "C#5":554.37, "D5":587.33, "D#5":622.25, "E5":659.25, "F5":698.46, "F#5":739.99, "G5":783.99, "G#5":830.61, "A5":880.00, "B5":987.77, "C6":1046.50 };
 // 拍手声（噪声短脉冲）
 function playClap(vol = 0.2) {
     const ac = getAudio(); if (!ac) return;
