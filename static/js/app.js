@@ -152,6 +152,7 @@ function appendComicButton(bubble, userMsg) {
 
 // ===== 加载教案漫画 =====
 async function loadComic(userMsg, btn) {
+    const bubble = btn.parentElement; // 先保存引用，remove后就找不到了
     btn.disabled = true; btn.textContent = "生成中...";
     try {
         const res = await fetch("/api/comic", {
@@ -160,7 +161,7 @@ async function loadComic(userMsg, btn) {
         });
         const data = await res.json();
         btn.remove();
-        // 在当前气泡后插入漫画
+        // 在当前气泡内插入漫画
         const comicEl = document.createElement("div");
         comicEl.className = "comic-strip";
         data.panels.forEach((p, idx) => {
@@ -177,9 +178,10 @@ async function loadComic(userMsg, btn) {
             `;
             comicEl.appendChild(panel);
         });
-        btn.parentElement.appendChild(comicEl);
+        bubble.appendChild(comicEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     } catch(e) {
+        console.error("漫画加载失败:", e);
         btn.disabled = false; btn.textContent = "🎨 查看漫画教案（重试）";
     }
 }
