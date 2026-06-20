@@ -238,8 +238,21 @@ function appendComicButton(bubble, userMsg) {
     playBtn.textContent = "▶ 演奏动画";
     playBtn.addEventListener("click", () => loadPlayAnim(userMsg, playBtn, bubble));
 
+    // 游戏按钮（仅特定曲目显示）
+    const gameKeywords = ["小星星","两只老虎","欢乐颂","巴赫","玛丽","天空之城"];
+    const hasGame = gameKeywords.some(k => userMsg.includes(k));
+    let gameBtn = null;
+    if (hasGame) {
+        gameBtn = document.createElement("button");
+        gameBtn.className = "comic-btn";
+        gameBtn.style.background = "#FFB84D";
+        gameBtn.textContent = "🎮 开始游戏";
+        gameBtn.addEventListener("click", () => startGame(userMsg));
+    }
+
     btnRow.appendChild(comicBtn);
     btnRow.appendChild(playBtn);
+    if (gameBtn) btnRow.appendChild(gameBtn);
     bubble.appendChild(btnRow);
 }
 
@@ -1468,6 +1481,483 @@ loadQuickQuestions();
 loadLibrary();
 initDashboard();
 initWelcomeAnim();
+
+// ===== 游戏系统 =====
+const gameOverlay = document.getElementById("gameOverlay");
+const gameCanvas = document.getElementById("gameCanvas");
+const gameTitle = document.getElementById("gameTitle");
+const gameInfo = document.getElementById("gameInfo");
+const gameCtx = gameCanvas.getContext("2d");
+
+document.getElementById("gameClose").addEventListener("click", () => {
+    gameOverlay.classList.remove("show");
+    gameRunning = false;
+});
+gameOverlay.addEventListener("click", (e) => {
+    if (e.target === gameOverlay) { gameOverlay.classList.remove("show"); gameRunning = false; }
+});
+
+let gameRunning = false;
+let gameScore = 0;
+let gameTapX = -1, gameTapY = -1;
+
+gameCanvas.addEventListener("click", (e) => {
+    const rect = gameCanvas.getBoundingClientRect();
+    const sx = gameCanvas.width / rect.width;
+    const sy = gameCanvas.height / rect.height;
+    gameTapX = (e.clientX - rect.left) * sx;
+    gameTapY = (e.clientY - rect.top) * sy;
+});
+gameCanvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    const rect = gameCanvas.getBoundingClientRect();
+    const sx = gameCanvas.width / rect.width;
+    const sy = gameCanvas.height / rect.height;
+    const t = e.touches[0];
+    gameTapX = (t.clientX - rect.left) * sx;
+    gameTapY = (t.clientY - rect.top) * sy;
+}, { passive: false });
+
+function startGame(userMsg) {
+    let gameType = "catch_star";
+    if (userMsg.includes("两只老虎")) gameType = "rhythm_tiger";
+    else if (userMsg.includes("欢乐颂")) gameType = "note_jump";
+    else if (userMsg.includes("巴赫")) gameType = "dance_34";
+    else if (userMsg.includes("玛丽")) gameType = "sheep_home";
+    else if (userMsg.includes("天空之城")) gameType = "castle_climb";
+
+    const titles = {
+        catch_star: "⭐ 接星星", rhythm_tiger: "🐯 节奏拍拍",
+        note_jump: "🎵 音符跳跃", dance_34: "💃 小步舞会",
+        sheep_home: "🐑 小羊回家", castle_climb: "🏰 城堡攀登"
+    };
+    gameTitle.textContent = titles[gameType] || "游戏";
+    gameOverlay.classList.add("show");
+    gameScore = 0; gameRunning = true; gameTapX = -1; gameTapY = -1;
+
+    const games = { catch_star, rhythm_tiger, note_jump, dance_34, sheep_home, castle_climb };
+    (games[gameType] || catch_star)();
+}
+
+// 游戏通用：结束
+function gameEnd(score) {
+    gameRunning = false;
+    const stars = score >= 80 ? "⭐⭐⭐" : score >= 50 ? "⭐⭐" : "⭐";
+    gameInfo.innerHTML = `<div style="font-size:18px;font-weight:700;color:var(--primary);margin-bottom:4px;">${stars} ${score}分</div>
+        <div>${score >= 80 ? "太棒了！你是钢琴小达人！" : score >= 50 ? "不错哦！继续练习会更棒！" : "加油！多练几次一定能行！"}</div>`;
+    playNote(NOTE_FREQ["C5"], 0.3, 0.2);
+    setTimeout(() => playNote(NOTE_FREQ["E5"], 0.3, 0.2), 150);
+    setTimeout(() => playNote(NOTE_FREQ["G5"], 0.5, 0.2), 300);
+}
+
+// 游戏1：接星星（小星星）
+function catch_star() {
+    const W = 400, H = 500;
+    const keys = [
+        {x: 60, label: "C", note: "C4"}, {x: 130, label: "D", note: "D4"},
+        {x: 200, label: "E", note: "E4"}, {x: 270, label: "F", note: "F4"},
+        {x: 340, label: "G", note: "G4"}
+    ];
+    const stars = [];
+    let frame = 0, spawnTimer = 0;
+    gameInfo.textContent = "星星上标着音名，点击对应琴键接住它！";
+    function loop() {
+        if (!gameRunning) return;
+        gameCtx.clearRect(0, 0, W, H);
+        // 背景渐变
+        const bg = gameCtx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, "#1a1535"); bg.addColorStop(1, "#4a3a70");
+        gameCtx.fillStyle = bg; gameCtx.fillRect(0, 0, W, H);
+        // 琴键
+        keys.forEach(k => {
+            gameCtx.fillStyle = "#F5F0F0"; gameCtx.fillRect(k.x - 28, H - 60, 56, 50);
+            gameCtx.strokeStyle = "#999"; gameCtx.lineWidth = 1;
+            gameCtx.strokeRect(k.x - 28, H - 60, 56, 50);
+            gameCtx.fillStyle = "#4A3F8E"; gameCtx.font = "bold 20px sans-serif"; gameCtx.textAlign = "center";
+            gameCtx.fillText(k.label, k.x, H - 28);
+        });
+        // 生成星星
+        spawnTimer++;
+        if (spawnTimer > 50) {
+            spawnTimer = 0;
+            const idx = Math.floor(Math.random() * 5);
+            stars.push({ x: keys[idx].x, y: -20, keyIdx: idx, label: keys[idx].label, note: keys[idx].note, rot: 0 });
+        }
+        // 星星下落
+        for (let i = stars.length - 1; i >= 0; i--) {
+            const s = stars[i];
+            s.y += 2.5; s.rot += 0.05;
+            // 绘制星星
+            gameCtx.save(); gameCtx.translate(s.x, s.y); gameCtx.rotate(s.rot);
+            gameCtx.fillStyle = "#FFD700"; gameCtx.font = "bold 22px sans-serif"; gameCtx.textAlign = "center";
+            gameCtx.fillText("⭐", 0, 8);
+            gameCtx.fillStyle = "#4A3F8E"; gameCtx.font = "bold 12px sans-serif";
+            gameCtx.fillText(s.label, 0, 24);
+            gameCtx.restore();
+            // 触摸检测
+            if (gameTapX >= 0) {
+                const k = keys[s.keyIdx];
+                if (gameTapX >= k.x - 28 && gameTapX <= k.x + 28 && gameTapY >= H - 60 && gameTapY <= H - 10) {
+                    if (s.y > H - 120 && s.y < H - 30) {
+                        gameScore += 10; playNote(NOTE_FREQ[s.note], 0.2, 0.2);
+                        stars.splice(i, 1); gameTapX = -1; gameTapY = -1;
+                        // 接住效果
+                        gameCtx.fillStyle = "rgba(255,215,0,0.3)"; gameCtx.beginPath();
+                        gameCtx.arc(k.x, H - 35, 30, 0, 6.28); gameCtx.fill();
+                        continue;
+                    }
+                }
+            }
+            // 掉落
+            if (s.y > H) { stars.splice(i, 1); gameScore = Math.max(0, gameScore - 2); }
+        }
+        gameTapX = -1; gameTapY = -1;
+        // 分数
+        gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 18px sans-serif"; gameCtx.textAlign = "left";
+        gameCtx.fillText("分数: " + gameScore, 10, 25);
+        gameCtx.fillStyle = "rgba(255,255,255,0.5)"; gameCtx.font = "11px sans-serif";
+        gameCtx.fillText("80分通关", 10, 42);
+        frame++;
+        if (frame < 900) requestAnimationFrame(loop);
+        else gameEnd(gameScore);
+    }
+    loop();
+}
+
+// 游戏2：节奏拍拍（两只老虎）
+function rhythm_tiger() {
+    const W = 400, H = 500;
+    const beats = [1,1,1,1, 1,1,1,1, 1,1,2, 1,1,2]; // 节奏型
+    const labels = ["C","D","E","C","C","D","E","C","E","F","G","E","F","G"];
+    const notes = ["C4","D4","E4","C4","C4","D4","E4","C4","E4","F4","G4","E4","F4","G4"];
+    let beatIdx = 0, frame = 0, nextBeat = 0;
+    const tigers = [];
+    let hitFlash = 0;
+    gameInfo.textContent = "老虎按节奏跳，在它落地时点击！";
+    function loop() {
+        if (!gameRunning) return;
+        gameCtx.clearRect(0, 0, W, H);
+        const bg = gameCtx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, "#2a3a1a"); bg.addColorStop(1, "#1a2a0a");
+        gameCtx.fillStyle = bg; gameCtx.fillRect(0, 0, W, H);
+        // 地面
+        gameCtx.fillStyle = "#3a5a2a"; gameCtx.fillRect(0, H - 80, W, 80);
+        // 判定线
+        gameCtx.strokeStyle = "rgba(255,184,77,0.5)"; gameCtx.lineWidth = 2;
+        gameCtx.setLineDash([5, 5]); gameCtx.beginPath();
+        gameCtx.moveTo(0, H - 120); gameCtx.lineTo(W, H - 120); gameCtx.stroke();
+        gameCtx.setLineDash([]);
+        gameCtx.fillStyle = "#FFB84D"; gameCtx.font = "10px sans-serif"; gameCtx.textAlign = "left";
+        gameCtx.fillText("点击这里", 5, H - 125);
+        // 生成老虎
+        const beatInt = 30;
+        if (frame >= nextBeat && beatIdx < beats.length) {
+            tigers.push({ x: W + 30, y: 80, vy: 0, label: labels[beatIdx], note: notes[beatIdx], dur: beats[beatIdx], hit: false });
+            nextBeat = frame + beats[beatIdx] * beatInt;
+            beatIdx++;
+        }
+        // 老虎移动
+        for (let i = tigers.length - 1; i >= 0; i--) {
+            const t = tigers[i];
+            t.x -= 3; t.vy += 0.5; t.y += t.vy;
+            if (t.y > H - 120 && t.vy > 0) { t.y = H - 120; t.vy = -8; } // 弹跳
+            // 绘制老虎
+            gameCtx.font = "28px sans-serif"; gameCtx.textAlign = "center";
+            gameCtx.fillText("🐯", t.x, t.y);
+            gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 14px sans-serif";
+            gameCtx.fillText(t.label, t.x, t.y + 22);
+            // 点击检测
+            if (gameTapX >= 0 && !t.hit) {
+                const dx = gameTapX - t.x, dy = gameTapY - t.y;
+                if (dx * dx + dy * dy < 1600 && t.y > H - 150) {
+                    t.hit = true; gameScore += 10; hitFlash = 10;
+                    playNote(NOTE_FREQ[t.note], 0.2, 0.2);
+                    tigers.splice(i, 1);
+                }
+            }
+            if (t.x < -30) tigers.splice(i, 1);
+        }
+        gameTapX = -1; gameTapY = -1;
+        // 命中闪光
+        if (hitFlash > 0) {
+            gameCtx.fillStyle = `rgba(255,215,0,${hitFlash * 0.05})`;
+            gameCtx.fillRect(0, H - 130, W, 50); hitFlash--;
+        }
+        // 分数
+        gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 18px sans-serif"; gameCtx.textAlign = "left";
+        gameCtx.fillText("分数: " + gameScore, 10, 25);
+        gameCtx.fillStyle = "rgba(255,255,255,0.5)"; gameCtx.font = "11px sans-serif";
+        gameCtx.fillText(beatIdx + "/" + beats.length + " 拍", 10, 42);
+        frame++;
+        if (beatIdx < beats.length || tigers.length > 0) requestAnimationFrame(loop);
+        else gameEnd(gameScore);
+    }
+    loop();
+}
+
+// 游戏3：音符跳跃（欢乐颂）
+function note_jump() {
+    const W = 400, H = 500;
+    const melody = ["E4","E4","F4","G4","G4","F4","E4","D4","C4","C4","D4","E4"];
+    const labels = ["E","E","F","G","G","F","E","D","C","C","D","E"];
+    let idx = 0, frame = 0, playerY = H - 80, playerVy = 0, onGround = true;
+    const platforms = [];
+    const step = W / 5;
+    for (let i = 0; i < 5; i++) platforms.push({ x: i * step + step / 2, y: H - 80 - i * 60, note: null, label: null });
+    let nextPlatform = 0;
+    gameInfo.textContent = "点击屏幕跳跃，踩对音符阶梯向上攀登！";
+    function loop() {
+        if (!gameRunning) return;
+        gameCtx.clearRect(0, 0, W, H);
+        const bg = gameCtx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, "#1a2a4a"); bg.addColorStop(1, "#4a6a9a");
+        gameCtx.fillStyle = bg; gameCtx.fillRect(0, 0, W, H);
+        // 跳跃
+        if (gameTapX >= 0 && onGround) { playerVy = -12; onGround = false; gameTapX = -1; }
+        else gameTapX = -1;
+        playerY += playerVy; playerVy += 0.6;
+        if (playerY > H - 80) { playerY = H - 80; playerVy = 0; onGround = true; }
+        // 平台
+        platforms.forEach((p, i) => {
+            gameCtx.fillStyle = p.note ? "#FFD700" : "#3a4a6a";
+            gameCtx.fillRect(p.x - 30, p.y, 60, 12);
+            if (p.label) {
+                gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 14px sans-serif"; gameCtx.textAlign = "center";
+                gameCtx.fillText(p.label, p.x, p.y - 4);
+            }
+            // 踩到平台
+            if (playerVy > 0 && Math.abs(playerY - p.y) < 15 && Math.abs(gameTapX === -1 ? -999 : gameTapX - p.x) < 40) {
+                if (p.note) {
+                    gameScore += 10; playNote(NOTE_FREQ[p.note], 0.2, 0.2);
+                    p.note = null; p.label = null;
+                }
+            }
+        });
+        // 分配下一个音符到最近未标记的平台
+        if (nextPlatform < melody.length && frame % 40 === 0) {
+            const p = platforms[nextPlatform % 5];
+            p.note = melody[nextPlatform]; p.label = labels[nextPlatform];
+            nextPlatform++;
+        }
+        // 玩家
+        gameCtx.font = "24px sans-serif"; gameCtx.textAlign = "center";
+        gameCtx.fillText("🎹", W / 2, playerY);
+        // 分数
+        gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 18px sans-serif"; gameCtx.textAlign = "left";
+        gameCtx.fillText("分数: " + gameScore, 10, 25);
+        frame++;
+        if (frame < 800) requestAnimationFrame(loop);
+        else gameEnd(gameScore);
+    }
+    loop();
+}
+
+// 游戏4：小步舞会（巴赫3/4拍）
+function dance_34() {
+    const W = 400, H = 500;
+    let frame = 0, beat = 0, beatTimer = 0;
+    const beatNotes = ["G4","D5","G4","A4","B4","C5","B4","A4","G4"];
+    const spots = [
+        {x: 120, y: 300}, {x: 200, y: 250}, {x: 280, y: 300}, // 强-弱-弱
+        {x: 120, y: 400}, {x: 200, y: 350}, {x: 280, y: 400},
+    ];
+    let spotIdx = 0, nextSpot = 0;
+    const dancers = [];
+    gameInfo.textContent = "3/4拍！强-弱-弱，踩对光点跳舞！";
+    function loop() {
+        if (!gameRunning) return;
+        gameCtx.clearRect(0, 0, W, H);
+        const bg = gameCtx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, "#3a1a3a"); bg.addColorStop(1, "#1a0a1a");
+        gameCtx.fillStyle = bg; gameCtx.fillRect(0, 0, W, H);
+        // 舞池地面
+        gameCtx.fillStyle = "rgba(50,30,60,0.5)"; gameCtx.beginPath();
+        gameCtx.ellipse(W/2, 350, 180, 100, 0, 0, 6.28); gameCtx.fill();
+        // 光点
+        beatTimer++;
+        const beatDuration = 25;
+        if (beatTimer >= beatDuration) {
+            beatTimer = 0;
+            if (nextSpot < 18) {
+                const spot = spots[beat % 3];
+                dancers.push({ x: spot.x, y: spot.y, life: 1, note: beatNotes[beat % beatNotes.length], isStrong: beat % 3 === 0 });
+                beat++; nextSpot++;
+            }
+        }
+        // 绘制光点+检测
+        spots.forEach((s, i) => {
+            const isNext = i === beat % 3;
+            gameCtx.fillStyle = isNext ? (beat % 3 === 0 ? "rgba(255,107,157,0.3)" : "rgba(255,184,77,0.2)") : "rgba(100,100,120,0.1)";
+            gameCtx.beginPath(); gameCtx.arc(s.x, s.y, 35, 0, 6.28); gameCtx.fill();
+            if (isNext) { gameCtx.strokeStyle = beat % 3 === 0 ? "#FF6B9D" : "#FFB84D"; gameCtx.lineWidth = 2;
+                gameCtx.beginPath(); gameCtx.arc(s.x, s.y, 35 + Math.sin(frame * 0.1) * 5, 0, 6.28); gameCtx.stroke(); }
+        });
+        // 舞者
+        for (let i = dancers.length - 1; i >= 0; i--) {
+            const d = dancers[i];
+            d.life -= 0.015;
+            if (d.life <= 0) { dancers.splice(i, 1); continue; }
+            // 检测点击
+            if (gameTapX >= 0) {
+                const dx = gameTapX - d.x, dy = gameTapY - d.y;
+                if (dx * dx + dy * dy < 1200) {
+                    gameScore += d.isStrong ? 15 : 10;
+                    playNote(NOTE_FREQ[d.note], 0.2, 0.15);
+                    dancers.splice(i, 1); gameTapX = -1; gameTapY = -1;
+                    continue;
+                }
+            }
+            gameCtx.globalAlpha = d.life;
+            gameCtx.font = "24px sans-serif"; gameCtx.textAlign = "center";
+            gameCtx.fillText("💃", d.x, d.y);
+            gameCtx.globalAlpha = 1;
+        }
+        gameTapX = -1; gameTapY = -1;
+        // 拍号显示
+        gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 20px sans-serif"; gameCtx.textAlign = "center";
+        const labels = ["强","弱","弱"];
+        gameCtx.fillText("3/4 " + labels[beat % 3], W / 2, 30);
+        gameCtx.font = "bold 16px sans-serif"; gameCtx.textAlign = "left";
+        gameCtx.fillText("分数: " + gameScore, 10, 50);
+        frame++;
+        if (frame < 600) requestAnimationFrame(loop);
+        else gameEnd(gameScore);
+    }
+    loop();
+}
+
+// 游戏5：小羊回家（玛丽有只小羊羔）
+function sheep_home() {
+    const W = 400, H = 500;
+    const path = [
+        {x: 80, y: 400, note: "E4", label: "E"},
+        {x: 160, y: 350, note: "D4", label: "D"},
+        {x: 240, y: 300, note: "C4", label: "C"},
+        {x: 320, y: 250, note: "D4", label: "D"},
+        {x: 320, y: 180, note: "E4", label: "E"},
+        {x: 200, y: 120, note: "home", label: "🏠"},
+    ];
+    let sheepIdx = 0, frame = 0;
+    const sheep = { x: path[0].x, y: path[0].y, tx: path[0].x, ty: path[0].y };
+    let moving = false;
+    gameInfo.textContent = "按E-D-C-D-E顺序点击路径，引导小羊回家！";
+    function loop() {
+        if (!gameRunning) return;
+        gameCtx.clearRect(0, 0, W, H);
+        const bg = gameCtx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, "#4a8a4a"); bg.addColorStop(1, "#2a5a2a");
+        gameCtx.fillStyle = bg; gameCtx.fillRect(0, 0, W, H);
+        // 路径线
+        gameCtx.strokeStyle = "rgba(255,255,255,0.3)"; gameCtx.lineWidth = 3;
+        gameCtx.setLineDash([5, 5]);
+        gameCtx.beginPath();
+        path.forEach((p, i) => { if (i === 0) gameCtx.moveTo(p.x, p.y); else gameCtx.lineTo(p.x, p.y); });
+        gameCtx.stroke(); gameCtx.setLineDash([]);
+        // 路径点
+        path.forEach((p, i) => {
+            const isNext = i === sheepIdx;
+            const isDone = i < sheepIdx;
+            gameCtx.fillStyle = isDone ? "#5FC9A8" : isNext ? "#FFD700" : "rgba(255,255,255,0.4)";
+            gameCtx.beginPath(); gameCtx.arc(p.x, p.y, 25, 0, 6.28); gameCtx.fill();
+            gameCtx.fillStyle = isDone ? "#FFF" : "#4A3F8E"; gameCtx.font = "bold 16px sans-serif"; gameCtx.textAlign = "center";
+            gameCtx.fillText(p.label, p.x, p.y + 5);
+            if (isNext && p.note !== "home") {
+                gameCtx.strokeStyle = "#FFD700"; gameCtx.lineWidth = 2;
+                gameCtx.beginPath(); gameCtx.arc(p.x, p.y, 30 + Math.sin(frame * 0.1) * 4, 0, 6.28); gameCtx.stroke();
+            }
+        });
+        // 点击检测
+        if (gameTapX >= 0 && !moving && sheepIdx < path.length) {
+            const p = path[sheepIdx];
+            const dx = gameTapX - p.x, dy = gameTapY - p.y;
+            if (dx * dx + dy * dy < 900) {
+                if (p.note === "home") {
+                    gameScore += 20; sheepIdx++; moving = false;
+                    playNote(NOTE_FREQ["C5"], 0.5, 0.2);
+                } else {
+                    gameScore += 10; playNote(NOTE_FREQ[p.note], 0.2, 0.2);
+                    sheepIdx++;
+                    if (sheepIdx < path.length) {
+                        sheep.tx = path[sheepIdx].x; sheep.ty = path[sheepIdx].y; moving = true;
+                    }
+                }
+            }
+            gameTapX = -1; gameTapY = -1;
+        }
+        // 小羊移动
+        if (moving) {
+            sheep.x += (sheep.tx - sheep.x) * 0.1; sheep.y += (sheep.ty - sheep.y) * 0.1;
+            if (Math.abs(sheep.x - sheep.tx) < 2) moving = false;
+        }
+        // 小羊
+        gameCtx.font = "28px sans-serif"; gameCtx.textAlign = "center";
+        gameCtx.fillText("🐑", sheep.x, sheep.y + 8);
+        // 分数
+        gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 18px sans-serif"; gameCtx.textAlign = "left";
+        gameCtx.fillText("分数: " + gameScore, 10, 25);
+        gameCtx.fillStyle = "rgba(255,255,255,0.5)"; gameCtx.font = "11px sans-serif";
+        gameCtx.fillText(sheepIdx + "/" + path.length + " 步", 10, 42);
+        frame++;
+        if (sheepIdx < path.length) requestAnimationFrame(loop);
+        else gameEnd(gameScore);
+    }
+    loop();
+}
+
+// 游戏6：城堡攀登（天空之城）
+function castle_climb() {
+    const W = 400, H = 500;
+    const melody = ["G4","A4","B4","A4","G4","E4","E4","D4","E4","G4","E4","D4"];
+    const labels = ["G","A","B","A","G","E","E","D","E","G","E","D"];
+    let idx = 0, frame = 0;
+    const climb = { y: H - 60, vy: 0 };
+    const steps = [];
+    for (let i = 0; i < 12; i++) {
+        steps.push({ x: 80 + (i % 2) * 240, y: H - 120 - i * 35, note: melody[i], label: labels[i], hit: false, idx: i });
+    }
+    let nextStep = 0;
+    gameInfo.textContent = "点击屏幕跳跃，踩对音符阶梯攀登到城堡！";
+    function loop() {
+        if (!gameRunning) return;
+        gameCtx.clearRect(0, 0, W, H);
+        const bg = gameCtx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, "#1a3a6a"); bg.addColorStop(0.5, "#4a6a9a"); bg.addColorStop(1, "#8ab0d0");
+        gameCtx.fillStyle = bg; gameCtx.fillRect(0, 0, W, H);
+        // 城堡（顶部）
+        gameCtx.font = "36px sans-serif"; gameCtx.textAlign = "center";
+        gameCtx.fillText("🏰", W / 2, 50);
+        // 跳跃
+        if (gameTapX >= 0) { climb.vy = -10; gameTapX = -1; }
+        climb.y += climb.vy; climb.vy += 0.5;
+        if (climb.y > H - 60) { climb.y = H - 60; climb.vy = 0; }
+        // 阶梯
+        steps.forEach(s => {
+            gameCtx.fillStyle = s.hit ? "#5FC9A8" : (s.idx === nextStep ? "#FFD700" : "#6a8aaa");
+            gameCtx.fillRect(s.x - 35, s.y, 70, 10);
+            if (!s.hit) {
+                gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 12px sans-serif"; gameCtx.textAlign = "center";
+                gameCtx.fillText(s.label, s.x, s.y - 3);
+            }
+            // 踩到
+            if (!s.hit && s.idx === nextStep && climb.vy > 0 && Math.abs(climb.y - s.y) < 20 && Math.abs(W / 2 - s.x) < 50) {
+                s.hit = true; gameScore += 10; climb.vy = -10;
+                playNote(NOTE_FREQ[s.note], 0.2, 0.15); nextStep++;
+            }
+        });
+        // 玩家
+        gameCtx.font = "22px sans-serif"; gameCtx.textAlign = "center";
+        gameCtx.fillText("🧗", W / 2, climb.y);
+        // 分数
+        gameCtx.fillStyle = "#FFF"; gameCtx.font = "bold 18px sans-serif"; gameCtx.textAlign = "left";
+        gameCtx.fillText("分数: " + gameScore, 10, 25);
+        gameCtx.fillStyle = "rgba(255,255,255,0.5)"; gameCtx.font = "11px sans-serif";
+        gameCtx.fillText(nextStep + "/" + steps.length + " 阶", 10, 42);
+        frame++;
+        if (nextStep < steps.length && frame < 800) requestAnimationFrame(loop);
+        else gameEnd(gameScore);
+    }
+    loop();
+}
 
 // ===== 学情驾驶舱 =====
 let dashStudents = [];
