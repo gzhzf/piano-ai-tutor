@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>🎹 琴乐启蒙AI导师</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -14,7 +13,6 @@
     <!-- ========== 顶部导航栏 ========== -->
     <header class="topbar">
         <div class="topbar-left">
-            <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
             <span class="logo">🎹</span>
             <div class="title-box">
                 <span class="title">琴乐启蒙AI导师</span>
@@ -24,9 +22,9 @@
         <div class="topbar-center">
             <nav class="view-tabs">
                 <button class="tab-btn active" data-view="chat">💬 对话</button>
+                <button class="tab-btn" data-view="library">📚 教案库</button>
                 <button class="tab-btn" data-view="dashboard">📊 驾驶舱</button>
                 <button class="tab-btn" data-view="workflow">⚙️ 工作流</button>
-                <button class="tab-btn" data-view="library">📚 教案库</button>
             </nav>
         </div>
         <div class="topbar-right">
@@ -35,39 +33,14 @@
                 <button class="role-btn" data-role="parent">🏠</button>
                 <button class="role-btn" data-role="student">🧒</button>
             </div>
-            <span class="status"><span class="dot"></span>在线</span>
+            <button class="help-btn" id="helpBtn" aria-label="帮助">❓</button>
         </div>
     </header>
-
-    <!-- 移动端遮罩 -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <main class="main-content">
 
         <!-- ========== 视图1：智能对话 ========== -->
         <div class="view view-chat active" id="view-chat">
-            <!-- 左侧栏 -->
-            <aside class="sidebar" id="sidebar">
-                <div class="sidebar-title">七大智能助手</div>
-                {% for a in assistants %}
-                <div class="assistant-item" data-assistant="{{ a.id }}">
-                    <span class="assistant-icon" style="background:{{ a.color }}">{{ a.icon }}</span>
-                    <div class="assistant-info">
-                        <div class="assistant-name">{{ a.name }}</div>
-                        <div class="assistant-desc">{{ a.desc }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-                <div class="kb-badge">
-                    <span>📚</span>
-                    <div>
-                        <div style="font-weight:600;font-size:12px">30首曲目库已加载</div>
-                        <div style="font-size:10px;color:#999">RAG检索增强生成</div>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- 对话区 -->
             <section class="chat-area">
                 <div class="chat-messages" id="chatMessages">
                     <div class="welcome-msg">
@@ -77,11 +50,7 @@
                         <p style="font-size:13px;color:#999;margin-top:8px">点击下方问题或直接输入开始对话</p>
                     </div>
                 </div>
-
-                <!-- 快捷问题（分类） -->
                 <div class="quick-questions" id="quickQuestions"></div>
-
-                <!-- 输入区 -->
                 <div class="chat-input-area">
                     <div class="chat-input-box">
                         <textarea id="chatInput" placeholder="输入问题，回车发送..." rows="1"></textarea>
@@ -172,6 +141,40 @@
         </div>
 
     </main>
+
+    <!-- ========== 帮助弹窗 ========== -->
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-modal">
+            <div class="help-header">
+                <h2>🎹 琴乐启蒙AI导师</h2>
+                <button class="help-close" id="helpClose">✕</button>
+            </div>
+            <div class="help-body">
+                <p class="help-desc">基于腾讯元器平台的小学低段钢琴启蒙智能体，覆盖30首曲目知识库，服务教师、家长、学生三类用户。</p>
+                <div class="help-section">
+                    <h3>💬 智能对话</h3>
+                    <p>切换角色（教师/家长/学生），点击分类问题或自由输入。智能体自动识别意图，生成教案、陪练方案、学情分析等。</p>
+                </div>
+                <div class="help-section">
+                    <h3>📚 曲目教案库</h3>
+                    <p>30首曲目按难度分级（零基础→3级），涵盖儿歌、拜厄、车尔尼、巴赫、小奏鸣曲、动漫曲。点击曲目即跳转对话生成教案。</p>
+                </div>
+                <div class="help-section">
+                    <h3>📊 学情驾驶舱</h3>
+                    <p>数据可视化面板，展示学生节奏准确率、错音率趋势、练习时长、能力雷达图，AI自动诊断并给出训练建议。</p>
+                </div>
+                <div class="help-section">
+                    <h3>⚙️ 工作流演示</h3>
+                    <p>选择年级、曲目、时长，AI五步自动生成完整结构化教案（目标→活动→评价→整合→输出）。</p>
+                </div>
+                <div class="help-section">
+                    <h3>🎭 角色切换</h3>
+                    <p>右上角切换身份，问题和回答风格自动适配：教师获专业教案，家长获陪练指导，学生获趣味儿童化回答。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 <script src="/static/js/app.js"></script>
 </body>
