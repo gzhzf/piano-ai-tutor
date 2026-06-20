@@ -143,11 +143,23 @@ function typewriterAppend(text, assistant, animation, userMsg, intent) {
 
 // ===== 教案漫画按钮 =====
 function appendComicButton(bubble, userMsg) {
-    const btn = document.createElement("button");
-    btn.className = "comic-btn";
-    btn.textContent = "🎨 查看漫画教案";
-    btn.addEventListener("click", () => loadComic(userMsg, btn));
-    bubble.appendChild(btn);
+    const btnRow = document.createElement("div");
+    btnRow.style.cssText = "margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;";
+
+    const comicBtn = document.createElement("button");
+    comicBtn.className = "comic-btn";
+    comicBtn.textContent = "🎨 漫画教案";
+    comicBtn.addEventListener("click", () => loadComic(userMsg, comicBtn));
+
+    const playBtn = document.createElement("button");
+    playBtn.className = "comic-btn";
+    playBtn.style.background = "#5FC9A8";
+    playBtn.textContent = "▶ 演奏动画";
+    playBtn.addEventListener("click", () => loadPlayAnim(userMsg, playBtn));
+
+    btnRow.appendChild(comicBtn);
+    btnRow.appendChild(playBtn);
+    bubble.appendChild(btnRow);
 }
 
 // ===== 加载教案漫画 =====
@@ -189,8 +201,182 @@ async function loadComic(userMsg, btn) {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     } catch(e) {
         console.error("漫画加载失败:", e);
-        btn.disabled = false; btn.textContent = "🎨 查看漫画教案（重试）";
+        btn.disabled = false; btn.textContent = "🎨 漫画教案（重试）";
     }
+}
+
+// ===== 演奏动画 =====
+async function loadPlayAnim(userMsg, btn) {
+    const bubble = btn.parentElement.parentElement;
+    btn.disabled = true; btn.textContent = "加载中...";
+    try {
+        const res = await fetch("/api/play?topic=" + encodeURIComponent(userMsg));
+        const data = await res.json();
+        btn.disabled = false; btn.textContent = "▶ 演奏动画";
+
+        // 创建演奏动画容器
+        const existing = bubble.querySelector(".play-anim-wrap");
+        if (existing) existing.remove();
+
+        const wrap = document.createElement("div");
+        wrap.className = "play-anim-wrap";
+        wrap.innerHTML = `
+            <div class="play-title">🎹 ${data.piece} · 演奏可视化</div>
+            <canvas class="play-canvas" width="360" height="200"></canvas>
+            <div class="play-controls">
+                <button class="play-start-btn">▶ 播放</button>
+                <span class="play-info"></span>
+            </div>
+        `;
+        bubble.appendChild(wrap);
+
+        const cv = wrap.querySelector(".play-canvas");
+        const startBtn = wrap.querySelector(".play-start-btn");
+        const info = wrap.querySelector(".play-info");
+        initPlayAnimation(cv, data.notes, data.piece, startBtn, info);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch(e) {
+        console.error("演奏动画加载失败:", e);
+        btn.disabled = false; btn.textContent = "▶ 演奏动画（重试）";
+    }
+}
+
+function initPlayAnimation(cv, notes, pieceName, startBtn, info) {
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    const NOTE_MAP = { "C3":-14,"C#3":-13.3,"D3":-13,"D#3":-12.3,"E3":-12,"F3":-11,"F#3":-10.3,
+        "G3":-10,"G#3":-9.3,"A3":-9,"A#3":-8.3,"B3":-8,
+        "C4":-7,"C#4":-6.3,"D4":-6,"D#4":-5.3,"E4":-5,"F4":-4,"F#4":-3.3,
+        "G4":-3,"G#4":-2.3,"A4":-2,"A#4":-1.3,"B4":-1,
+        "C5":0,"C#5":0.7,"D5":1,"D#5":1.7,"E5":2,"F5":3,"F#5":3.7,"G5":4 };
+
+    const allNotes = [...notes].sort((a,b) => a[1] - b[1]);
+    const totalBeats = Math.max(...notes.map(n => n[1] + n[2])) + 1;
+    const bpm = 80;
+    const beatMs = 60000 / bpm;
+    const fallBeats = 2; // 提前2拍开始下落
+    const keyStart = -14, keyEnd = 5;
+    const numKeys = keyEnd - keyEnd;
+    const totalKeys = 21; // C3到G5白键数
+    const wkW = W / totalKeys;
+    const keyY = H - 60;
+    const keyH = 55;
+
+    let startTime = null;
+    let playing = false;
+    let playedSet = new Set();
+
+    function noteX(noteName) {
+        const pos = NOTE_MAP[noteName] || 0;
+        return (pos - keyStart) * wkW;
+    }
+
+    function draw(t) {
+        if (!playing) return;
+        if (!startTime) startTime = t;
+        const elapsed = (t - startTime) / beatMs;
+        ctx.clearRect(0, 0, W, H);
+
+        // 判定线
+        ctx.strokeStyle = "rgba(255,107,157,0.5)"; ctx.lineWidth = 2;
+        ctx.setLineDash([4,4]);
+        ctx.beginPath(); ctx.moveTo(0, keyY); ctx.lineTo(W, keyY); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 键盘
+        for (let i = 0; i < totalKeys; i++) {
+            const keyPos = keyStart + i;
+            let isBlack = false;
+            const mod = ((keyPos % 7) + 7) % 7;
+            if ([0.7,1.7,3.7,4.7,5.7].some(o => Math.abs((keyPos % 1) - o) < 0.1)) isBlack = true;
+            if (keyPos % 1 !== 0) continue; // 只画白键
+            ctx.fillStyle = "#FFFFFF"; ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
+            ctx.fillRect(i * wkW, keyY, wkW - 1, keyH);
+            ctx.strokeRect(i * wkW, keyY, wkW - 1, keyH);
+        }
+        // 黑键
+        for (let i = 0; i < totalKeys; i++) {
+            const keyPos = keyStart + i;
+            const blackOffsets = [0.7,1.7,3.7,4.7,5.7];
+            for (const off of blackOffsets) {
+                const bkPos = Math.floor(keyPos) + off;
+                if (Math.abs(keyPos - bkPos) < 0.1) {
+                    ctx.fillStyle = "#2D2A4A";
+                    ctx.fillRect((i + off - 0.35) * wkW, keyY, wkW * 0.6, keyH * 0.6);
+                }
+            }
+        }
+
+        // 下落音符
+        notes.forEach((n, idx) => {
+            const [noteName, startBeat, dur, hand] = n;
+            const noteStart = startBeat;
+            const noteEnd = startBeat + dur;
+            if (elapsed < noteStart - fallBeats || elapsed > noteEnd + 0.5) return;
+
+            const x = noteX(noteName);
+            const fallProgress = (elapsed - (noteStart - fallBeats)) / fallBeats;
+            const y = fallProgress < 1 ? keyY - (1 - fallProgress) * (keyY - 10) : keyY;
+            const h = dur * 22;
+            const color = hand === "R" ? "#FF6B9D" : "#4FC3F7";
+
+            // 音符方块
+            ctx.fillStyle = color;
+            ctx.globalAlpha = (elapsed > noteEnd) ? Math.max(0, 1 - (elapsed - noteEnd) * 2) : 0.85;
+            ctx.fillRect(x + 1, y - h, wkW - 2, h);
+            ctx.globalAlpha = 1;
+
+            // 到达判定线时高亮键+播放声音
+            if (elapsed >= noteStart && elapsed < noteStart + 0.1 && !playedSet.has(idx)) {
+                playedSet.add(idx);
+                const freq = NOTE_FREQ[noteName] || 261.63;
+                playNote(freq, Math.min(dur * 0.8, 1.5), 0.25);
+                // 高亮键
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.4;
+                ctx.fillRect(x, keyY, wkW - 1, keyH);
+                ctx.globalAlpha = 1;
+            }
+            // 持续高亮
+            if (elapsed >= noteStart && elapsed < noteEnd) {
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.3;
+                ctx.fillRect(x, keyY, wkW - 1, keyH);
+                ctx.globalAlpha = 1;
+            }
+        });
+
+        // 进度
+        const progress = Math.min(elapsed / totalBeats, 1);
+        ctx.fillStyle = "#4A3F8E"; ctx.font = "11px 微软雅黑"; ctx.textAlign = "left";
+        ctx.fillText(`${pieceName}  ♩=${bpm}  ${Math.floor(elapsed)}/${Math.floor(totalBeats)}拍`, 6, 14);
+        // 进度条
+        ctx.fillStyle = "#E8E5F5"; ctx.fillRect(0, H - 4, W, 4);
+        ctx.fillStyle = "#FF6B9D"; ctx.fillRect(0, H - 4, W * progress, 4);
+
+        // 手指标注
+        ctx.fillStyle = "#FF6B9D"; ctx.font = "9px 微软雅黑"; ctx.textAlign = "left";
+        ctx.fillText("● 右手", W - 60, 14);
+        ctx.fillStyle = "#4FC3F7";
+        ctx.fillText("● 左手", W - 60, 26);
+
+        if (elapsed < totalBeats + 1) {
+            requestAnimationFrame(draw);
+        } else {
+            playing = false;
+            startBtn.textContent = "▶ 重新播放";
+            startBtn.disabled = false;
+            info.textContent = "演奏完成 ✓";
+        }
+    }
+
+    startBtn.addEventListener("click", () => {
+        if (playing) return;
+        playing = true; startTime = null; playedSet.clear();
+        startBtn.disabled = true; startBtn.textContent = "演奏中...";
+        info.textContent = "";
+        requestAnimationFrame(draw);
+    });
 }
 
 function speakerName(s) {
