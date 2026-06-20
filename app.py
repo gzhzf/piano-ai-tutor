@@ -6,6 +6,7 @@
 from flask import Flask, render_template, request, jsonify
 from engine.matcher import generate_response, get_quick_questions, get_workflow_steps
 from engine.knowledge_base import get_all_knowledge
+from engine.repertoire import ALL_REPERTOIRE, LEVEL_INDEX, get_repertoire_by_level, search_repertoire
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
@@ -126,6 +127,27 @@ def workflow():
 def knowledge():
     """知识库数据（RAG展示）"""
     return jsonify(get_all_knowledge())
+
+
+@app.route("/api/repertoire")
+def repertoire():
+    """曲目库数据"""
+    level = request.args.get("level", "")
+    if level:
+        names = get_repertoire_by_level(level)
+        result = {name: ALL_REPERTOIRE[name] for name in names if name in ALL_REPERTOIRE}
+        return jsonify({"level": level, "count": len(result), "pieces": result})
+    return jsonify({"count": len(ALL_REPERTOIRE), "pieces": ALL_REPERTOIRE, "level_index": LEVEL_INDEX})
+
+
+@app.route("/api/repertoire/search")
+def repertoire_search():
+    """曲目搜索"""
+    q = request.args.get("q", "")
+    if not q:
+        return jsonify({"results": []})
+    results = search_repertoire(q)
+    return jsonify({"query": q, "count": len(results), "results": results})
 
 
 if __name__ == "__main__":
