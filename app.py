@@ -1,0 +1,139 @@
+# -*- coding: utf-8 -*-
+"""
+琴乐启蒙AI导师 - Flask主应用
+基于Tomplay智慧钢琴的小学低段钢琴启蒙智能体
+"""
+from flask import Flask, render_template, request, jsonify
+from engine.matcher import generate_response, get_quick_questions, get_workflow_steps
+from engine.knowledge_base import get_all_knowledge
+
+app = Flask(__name__, static_folder="static", template_folder="templates")
+
+# ============ 学情驾驶舱数据 ============
+DASHBOARD_DATA = {
+    "student": {
+        "name": "学生A",
+        "grade": "一年级",
+        "week": "第4周",
+        "piece": "巴赫《G大调小步舞曲》",
+        "rating": "B+"
+    },
+    "metrics": {
+        "rhythm_accuracy": 82,
+        "pitch_accuracy": 89,
+        "hand_posture": 91,
+        "error_rate": 11,
+        "practice_minutes": 128
+    },
+    "charts": {
+        "rhythm": "/static/img/charts/d_rhythm.png",
+        "pitch": "/static/img/charts/d_pitch.png",
+        "hand": "/static/img/charts/d_hand.png",
+        "errors": "/static/img/charts/b_errors.png",
+        "minutes": "/static/img/charts/b_minutes.png",
+        "radar": "/static/img/charts/r_focus.png"
+    },
+    "diagnosis": [
+        {"type": "warn", "text": "节奏准确率82%，低于目标值90%"},
+        {"type": "warn", "text": "错音率11%，集中在四分音符长音"},
+        {"type": "good", "text": "手型规范度良好，保持现有训练"},
+        {"type": "suggest", "text": "建议：加强四分音符专项节奏训练"},
+        {"type": "suggest", "text": "建议：增加跟灯模式循环练习5分钟"}
+    ]
+}
+
+# ============ 七大助手信息 ============
+ASSISTANTS = [
+    {"id": "lesson_plan", "name": "教案生成助手", "icon": "📋", "color": "#FF6B9D",
+     "desc": "自动生成结构化教案"},
+    {"id": "activity", "name": "课堂活动助手", "icon": "🎮", "color": "#FFB84D",
+     "desc": "设计游戏化课堂活动"},
+    {"id": "rhythm_train", "name": "节奏训练助手", "icon": "⏱", "color": "#5FC9A8",
+     "desc": "节拍稳定性训练方案"},
+    {"id": "analysis", "name": "学情分析助手", "icon": "📊", "color": "#4FC3F7",
+     "desc": "数据驱动教学诊断"},
+    {"id": "parent_guide", "name": "家长指导助手", "icon": "🏠", "color": "#FF6B9D",
+     "desc": "家庭陪练方案指导"},
+    {"id": "growth", "name": "成长档案助手", "icon": "📈", "color": "#FFB84D",
+     "desc": "学习轨迹记录"},
+    {"id": "student_qa", "name": "学生问答助手", "icon": "🧒", "color": "#5FC9A8",
+     "desc": "趣味儿童化问答"}
+]
+
+# ============ 路由 ============
+@app.route("/")
+def index():
+    return render_template("index.html",
+                           assistants=ASSISTANTS,
+                           dashboard=DASHBOARD_DATA)
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """对话接口"""
+    data = request.json
+    message = data.get("message", "").strip()
+    role = data.get("role", "teacher")
+
+    if not message:
+        return jsonify({"error": "消息不能为空"}), 400
+
+    # 生成回复
+    reply, intent = generate_response(message, role)
+
+    # 找到对应助手信息
+    assistant_info = None
+    for a in ASSISTANTS:
+        if a["id"] == intent:
+            assistant_info = a
+            break
+
+    return jsonify({
+        "reply": reply,
+        "intent": intent,
+        "assistant": assistant_info,
+        "role": role
+    })
+
+
+@app.route("/api/quick-questions")
+def quick_questions():
+    """快捷问题"""
+    role = request.args.get("role", "teacher")
+    return jsonify({"questions": get_quick_questions(role)})
+
+
+@app.route("/api/dashboard")
+def dashboard():
+    """学情驾驶舱数据"""
+    return jsonify(DASHBOARD_DATA)
+
+
+@app.route("/api/workflow", methods=["POST"])
+def workflow():
+    """工作流演示"""
+    data = request.json
+    params = {
+        "grade": data.get("grade", "一年级"),
+        "content": data.get("content", "中央C"),
+        "duration": data.get("duration", "15")
+    }
+    steps = get_workflow_steps(params)
+    return jsonify({"steps": steps, "params": params})
+
+
+@app.route("/api/knowledge")
+def knowledge():
+    """知识库数据（RAG展示）"""
+    return jsonify(get_all_knowledge())
+
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    print("=" * 50)
+    print("🎹 琴乐启蒙AI导师 已启动")
+    print(f"📱 访问地址: http://localhost:{port}")
+    print("💡 按 Ctrl+C 停止服务")
+    print("=" * 50)
+    app.run(host="0.0.0.0", port=port, debug=False)

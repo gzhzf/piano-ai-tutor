@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎹 琴乐启蒙AI导师</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div id="app">
+
+    <!-- ========== 顶部导航栏 ========== -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <span class="logo">🎹</span>
+            <div class="title-box">
+                <span class="title">琴乐启蒙AI导师</span>
+                <span class="subtitle">Piano Smart Tutor</span>
+            </div>
+        </div>
+        <div class="topbar-center">
+            <nav class="view-tabs">
+                <button class="tab-btn active" data-view="chat">💬 智能对话</button>
+                <button class="tab-btn" data-view="dashboard">📊 学情驾驶舱</button>
+                <button class="tab-btn" data-view="workflow">⚙️ 工作流演示</button>
+            </nav>
+        </div>
+        <div class="topbar-right">
+            <div class="role-switch">
+                <button class="role-btn active" data-role="teacher">👨‍🏫 教师</button>
+                <button class="role-btn" data-role="parent">🏠 家长</button>
+                <button class="role-btn" data-role="student">🧒 学生</button>
+            </div>
+            <span class="status"><span class="dot"></span>在线</span>
+        </div>
+    </header>
+
+    <main class="main-content">
+
+        <!-- ========== 视图1：智能对话 ========== -->
+        <div class="view view-chat active" id="view-chat">
+            <!-- 左侧栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-title">七大智能助手</div>
+                {% for a in assistants %}
+                <div class="assistant-item" data-assistant="{{ a.id }}">
+                    <span class="assistant-icon" style="background:{{ a.color }}">{{ a.icon }}</span>
+                    <div class="assistant-info">
+                        <div class="assistant-name">{{ a.name }}</div>
+                        <div class="assistant-desc">{{ a.desc }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="kb-badge">
+                    <span>📚</span>
+                    <div>
+                        <div style="font-weight:600;font-size:12px">四级知识库已加载</div>
+                        <div style="font-size:10px;color:#999">RAG检索增强生成</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 对话区 -->
+            <section class="chat-area">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-msg">
+                        <div class="welcome-icon">🎹</div>
+                        <h2>欢迎使用琴乐启蒙AI导师</h2>
+                        <p>我是基于腾讯元器平台的钢琴启蒙智能体，可以帮教师设计课程、帮家长科学陪练、帮学生趣味学琴</p>
+                        <p style="font-size:13px;color:#999;margin-top:8px">请选择左侧助手，或直接输入您的问题开始对话</p>
+                    </div>
+                </div>
+
+                <!-- 快捷问题 -->
+                <div class="quick-questions" id="quickQuestions"></div>
+
+                <!-- 输入区 -->
+                <div class="chat-input-area">
+                    <div class="chat-input-box">
+                        <textarea id="chatInput" placeholder="输入您的问题，按回车发送..." rows="1"></textarea>
+                        <button id="sendBtn" class="send-btn">发送 ➤</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========== 视图2：学情驾驶舱 ========== -->
+        <div class="view view-dashboard" id="view-dashboard">
+            <div class="dashboard-header">
+                <div class="dash-student-info">
+                    <span class="dash-avatar">👤</span>
+                    <div>
+                        <div class="dash-student-name">{{ dashboard.student.name }} · {{ dashboard.student.grade }} · {{ dashboard.student.week }}</div>
+                        <div class="dash-piece">当前曲目：{{ dashboard.student.piece }}</div>
+                    </div>
+                </div>
+                <div class="dash-rating">综合评级 {{ dashboard.student.rating }}</div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- 左列：三个环形图 -->
+                <div class="dash-col dash-col-charts">
+                    <div class="dash-card"><img src="{{ dashboard.charts.rhythm }}" alt="节奏"></div>
+                    <div class="dash-card"><img src="{{ dashboard.charts.pitch }}" alt="音准"></div>
+                    <div class="dash-card"><img src="{{ dashboard.charts.hand }}" alt="手型"></div>
+                </div>
+                <!-- 中列：趋势图 -->
+                <div class="dash-col">
+                    <div class="dash-card dash-card-wide"><img src="{{ dashboard.charts.errors }}" alt="错音率"></div>
+                    <div class="dash-card dash-card-wide"><img src="{{ dashboard.charts.minutes }}" alt="练习时长"></div>
+                </div>
+                <!-- 右列：雷达图 + AI诊断 -->
+                <div class="dash-col">
+                    <div class="dash-card"><img src="{{ dashboard.charts.radar }}" alt="雷达图"></div>
+                    <div class="dash-card dash-diagnosis">
+                        <div class="diagnosis-title">🤖 AI 智能诊断与推荐</div>
+                        <div class="diagnosis-list">
+                            {% for d in dashboard.diagnosis %}
+                            <div class="diagnosis-item diagnosis-{{ d.type }}">{{ d.text }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 视图3：工作流演示 ========== -->
+        <div class="view view-workflow" id="view-workflow">
+            <div class="wf-intro">
+                <h2>⚙️ 教案自动生成工作流</h2>
+                <p>输入教学要素，AI五步自动生成完整教案</p>
+            </div>
+
+            <div class="wf-input-panel">
+                <div class="wf-input-group">
+                    <label>年级</label>
+                    <select id="wfGrade">
+                        <option value="一年级">一年级</option>
+                        <option value="二年级">二年级</option>
+                        <option value="三年级">三年级</option>
+                    </select>
+                </div>
+                <div class="wf-input-group">
+                    <label>教学内容</label>
+                    <select id="wfContent">
+                        <option value="中央C">中央C</option>
+                        <option value="节奏">节奏训练</option>
+                        <option value="小星星">《小星星》</option>
+                    </select>
+                </div>
+                <div class="wf-input-group">
+                    <label>时长（分钟）</label>
+                    <input type="number" id="wfDuration" value="15" min="5" max="40">
+                </div>
+                <button id="wfRunBtn" class="wf-run-btn">▶ 开始生成</button>
+            </div>
+
+            <div class="wf-flow" id="wfFlow">
+                <div class="wf-placeholder">点击「开始生成」体验AI工作流引擎</div>
+            </div>
+        </div>
+
+    </main>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
