@@ -170,6 +170,10 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 ::-webkit-scrollbar-thumb { background:var(--light-gray); border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:var(--gray); }
 
+/* ===== 内嵌动画 ===== */
+.anim-container { margin-top:12px; padding:8px; background:rgba(255,255,255,0.6); border-radius:10px; display:flex; justify-content:center; }
+.anim-canvas { max-width:100%; height:auto; border-radius:8px; }
+
 /* ===== 平板 (≤1024px) ===== */
 @media (max-width:1024px) {
     .dash-col-charts { width:180px; }

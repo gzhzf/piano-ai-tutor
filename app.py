@@ -80,7 +80,7 @@ def chat():
         return jsonify({"error": "消息不能为空"}), 400
 
     # 生成回复
-    reply, intent = generate_response(message, role)
+    reply, intent, sub_intent = generate_response(message, role)
 
     # 找到对应助手信息
     assistant_info = None
@@ -89,11 +89,19 @@ def chat():
             assistant_info = a
             break
 
+    # 确定动画类型（学生问答时配动画）
+    animation = None
+    if intent == "student_qa" and sub_intent:
+        animation = sub_intent  # "中央C" / "手型" / "节奏"
+    elif intent == "rhythm_train":
+        animation = "节奏"
+
     return jsonify({
         "reply": reply,
         "intent": intent,
         "assistant": assistant_info,
-        "role": role
+        "role": role,
+        "animation": animation
     })
 
 

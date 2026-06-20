@@ -55,11 +55,12 @@ INTENT_KEYWORDS = {
     },
     "student_qa": {
         "keywords": ["中央c在哪", "琴键在哪", "在哪里", "什么是", "怎么找",
-                     "手型怎么", "节奏是什么", "是什么呀", "教我"],
+                     "手型", "怎么放", "手指", "节奏是什么", "是什么呀",
+                     "教我", "黑键", "白键", "高音谱号", "节拍器"],
         "sub_keys": {
-            "中央C": ["中央c在哪", "中央c在哪", "c在哪", "c在哪", "中央在哪", "c在哪"],
-            "手型": ["手型", "怎么放手", "手指怎么", "握鸡蛋"],
-            "节奏": ["节奏是什么", "什么是节奏", "节拍是什么", "四分音符是什么", "怎么数拍"]
+            "中央C": ["中央c在哪", "中央c在哪", "c在哪", "c在哪", "中央在哪", "c在哪", "中央c"],
+            "手型": ["手型", "怎么放手", "手指怎么", "握鸡蛋", "怎么放"],
+            "节奏": ["节奏是什么", "什么是节奏", "节拍是什么", "四分音符是什么", "怎么数拍", "节奏"]
         }
     },
     "rhythm_train": {
@@ -130,30 +131,31 @@ def _match_sub(msg, intent):
 def generate_response(message, role="teacher"):
     """
     生成回复：意图分类 → 选择模板 → 返回回复
+    返回 (reply, intent, sub_intent)
     """
     intent, sub = classify_intent(message)
 
     # 兜底
     if intent == "fallback":
-        return RESPONSES["fallback"], "fallback"
+        return RESPONSES["fallback"], "fallback", None
 
     # 获取对应回复库
     resp_pool = RESPONSES.get(intent, {})
 
     # 尝试子意图
     if sub and sub in resp_pool:
-        return resp_pool[sub], intent
+        return resp_pool[sub], intent, sub
 
     # 尝试默认
     if "default" in resp_pool:
-        return resp_pool["default"], intent
+        return resp_pool["default"], intent, sub
 
     # 尝试第一个可用回复
     for key, val in resp_pool.items():
         if key != "default":
-            return val, intent
+            return val, intent, key
 
-    return RESPONSES["fallback"], "fallback"
+    return RESPONSES["fallback"], "fallback", None
 
 
 def get_quick_questions(role):
