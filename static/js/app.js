@@ -84,7 +84,7 @@ function sendMessage() {
     .then(res => res.json())
     .then(data => {
         hideTyping();
-        typewriterAppend(data.reply, data.assistant, data.animation);
+        typewriterAppend(data.reply, data.assistant, data.animation, msg, data.intent);
         isTyping = false; sendBtn.disabled = false;
     })
     .catch(() => {
@@ -115,7 +115,7 @@ function appendMessage(text, sender, assistant) {
 }
 
 // ===== 打字机效果 =====
-function typewriterAppend(text, assistant, animation) {
+function typewriterAppend(text, assistant, animation, userMsg, intent) {
     const msg = document.createElement("div"); msg.className = "msg msg-ai";
     const avatar = document.createElement("div"); avatar.className = "ai-avatar"; avatar.textContent = assistant ? assistant.icon : "🎹";
     const bubble = document.createElement("div"); bubble.className = "bubble";
@@ -132,12 +132,96 @@ function typewriterAppend(text, assistant, animation) {
             if (animation) {
                 setTimeout(() => appendAnimation(msg, animation), 300);
             }
+            // 教案类回复添加漫画按钮
+            if (intent === "lesson_plan" && userMsg) {
+                setTimeout(() => appendComicButton(bubble, userMsg), animation ? 1500 : 300);
+            }
         }
     }
     type();
 }
 
+// ===== 教案漫画按钮 =====
+function appendComicButton(bubble, userMsg) {
+    const btn = document.createElement("button");
+    btn.className = "comic-btn";
+    btn.textContent = "🎨 查看漫画教案";
+    btn.addEventListener("click", () => loadComic(userMsg, btn));
+    bubble.appendChild(btn);
+}
+
+// ===== 加载教案漫画 =====
+async function loadComic(userMsg, btn) {
+    btn.disabled = true; btn.textContent = "生成中...";
+    try {
+        const res = await fetch("/api/comic", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ topic: userMsg })
+        });
+        const data = await res.json();
+        btn.remove();
+        // 在当前气泡后插入漫画
+        const comicEl = document.createElement("div");
+        comicEl.className = "comic-strip";
+        data.panels.forEach((p, idx) => {
+            const panel = document.createElement("div");
+            panel.className = "comic-panel";
+            panel.style.borderColor = p.color;
+            panel.style.background = p.bg;
+            panel.innerHTML = `
+                <div class="comic-panel-num" style="background:${p.color}">${idx + 1}</div>
+                <div class="comic-emoji">${p.emoji}</div>
+                <div class="comic-char" style="color:${p.color}">${p.char}</div>
+                <div class="comic-scene">${p.scene}</div>
+                <div class="comic-text">${p.text}</div>
+            `;
+            comicEl.appendChild(panel);
+        });
+        btn.parentElement.appendChild(comicEl);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch(e) {
+        btn.disabled = false; btn.textContent = "🎨 查看漫画教案（重试）";
+    }
+}
+
 // ===== 内嵌Canvas动画 =====
+
+// Web Audio 钢琴音色合成
+let audioCtx = null;
+function getAudio() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+    return audioCtx;
+}
+// 播放钢琴音：freq频率, dur时长秒, vol音量0-1
+function playNote(freq, dur = 0.5, vol = 0.3) {
+    const ac = getAudio(); if (!ac) return;
+    const t = ac.currentTime;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = "triangle"; // 三角波模拟钢琴
+    osc.frequency.setValueAtTime(freq, t);
+    // 钢琴包络：快起慢落
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.start(t); osc.stop(t + dur);
+}
+// 钢琴频率（中央C=261.63Hz）
+const NOTE_FREQ = { "C4":261.63, "D4":293.66, "E4":329.63, "F4":349.23, "G4":392.00, "A4":440.00, "B4":493.88, "C5":523.25 };
+// 拍手声（噪声短脉冲）
+function playClap(vol = 0.2) {
+    const ac = getAudio(); if (!ac) return;
+    const t = ac.currentTime;
+    const buf = ac.createBuffer(1, ac.sampleRate * 0.05, ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const gain = ac.createGain(); gain.gain.value = vol;
+    src.connect(gain); gain.connect(ac.destination);
+    src.start(t);
+}
+
 function appendAnimation(msgEl, type) {
     const container = document.createElement("div");
     container.className = "anim-container";
@@ -159,23 +243,28 @@ function animFindMiddleC(ctx, cv) {
     const wkW = 28, bkW = 18, bkH = 55, wkH = 90;
     const startX = (W - wkW * 10) / 2;
     const keys = [];
-    // 10个白键
     for (let i = 0; i < 10; i++) keys.push({ x: startX + i * wkW, isBlack: false, lit: false, isC: false });
-    // 黑键（2+3模式，从第0个白键后开始）
     const blackOffsets = [0.7, 1.7, 3.7, 4.7, 5.7];
     const blacks = [];
     for (let oct = 0; oct < 2; oct++) {
         for (const off of blackOffsets) {
-            if (oct === 0 && off > 2.5) continue; // 第一组只2个黑键
+            if (oct === 0 && off > 2.5) continue;
             blacks.push({ x: startX + (oct * 7 + off) * wkW, isBlack: true, lit: false });
         }
     }
-    const cIndex = 3; // 第4个白键是中央C（2黑键左边）
-
+    const cIndex = 3;
     let phase = 0, frame = 0;
+    let lastPhase = -1;
+
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        // 白键
+        // 阶段切换时播放音效
+        if (phase !== lastPhase) {
+            lastPhase = phase;
+            if (phase === 2) playNote(NOTE_FREQ["C4"], 0.3, 0.15); // 找到黑键时轻声
+            if (phase === 3) playNote(NOTE_FREQ["C4"], 0.3, 0.2);  // 指向白键
+            if (phase === 4) playNote(NOTE_FREQ["C4"], 1.0, 0.35); // 中央C！响亮
+        }
         keys.forEach((k, i) => {
             let color = "#FFFFFF";
             if (phase >= 3 && i === cIndex) {
@@ -185,14 +274,12 @@ function animFindMiddleC(ctx, cv) {
             ctx.strokeStyle = "#CCCCDD"; ctx.lineWidth = 1;
             ctx.fillRect(k.x, 15, wkW - 1, wkH); ctx.strokeRect(k.x, 15, wkW - 1, wkH);
         });
-        // 黑键
         blacks.forEach((b, i) => {
             let color = "#2D2A4A";
-            if (phase >= 2 && phase < 4 && i < 2) color = "#FFB84D"; // 高亮2黑键
+            if (phase >= 2 && phase < 4 && i < 2) color = "#FFB84D";
             ctx.fillStyle = color;
             ctx.fillRect(b.x, 15, bkW, bkH);
         });
-        // 标注
         ctx.textAlign = "center";
         if (phase === 0) { ctx.fillStyle = "#6B688A"; ctx.font = "13px 微软雅黑"; ctx.fillText("钢琴键盘", W/2, 125); }
         else if (phase >= 2 && phase < 3) { ctx.fillStyle = "#FFB84D"; ctx.font = "bold 12px 微软雅黑"; ctx.fillText("← 两个黑键", blacks[1].x + 9, 10); }
@@ -200,6 +287,8 @@ function animFindMiddleC(ctx, cv) {
         else if (phase >= 4) {
             ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 14px 微软雅黑";
             ctx.fillText("中央C (Do)", keys[cIndex].x + 14, 125);
+            // 闪烁时重复播放C音
+            if (frame % 80 === 0 && frame > 160) playNote(NOTE_FREQ["C4"], 0.5, 0.25);
         }
         frame++;
         if (frame % 40 === 0 && phase < 4) phase++;
@@ -212,30 +301,43 @@ function animFindMiddleC(ctx, cv) {
 function animHandShape(ctx, cv) {
     const W = cv.width, H = cv.height;
     let frame = 0;
+    let lastFinger = -1;
     function draw() {
         ctx.clearRect(0, 0, W, H);
         const cx = W / 2, cy = H / 2 + 10;
-        const eggY = cy - 15 + Math.sin(frame * 0.05) * 3; // 鸡蛋微微浮动
+        const eggY = cy - 15 + Math.sin(frame * 0.05) * 3;
 
-        // 手掌弧线
         ctx.strokeStyle = "#4A3F8E"; ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(cx, cy + 20, 60, Math.PI * 1.15, Math.PI * 1.85);
         ctx.stroke();
 
-        // 五个手指（弧形排列）
         const fingerColors = ["#FF6B9D", "#FFB84D", "#5FC9A8", "#4FC3F7", "#4A3F8E"];
+        const fingerNotes = ["C4", "D4", "E4", "F4", "G4"];
+        // 逐个手指高亮+发声（每60帧亮一个）
+        const activeFinger = Math.floor(frame / 60) % 5;
+        if (activeFinger !== lastFinger && frame < 300) {
+            lastFinger = activeFinger;
+            playNote(NOTE_FREQ[fingerNotes[activeFinger]], 0.3, 0.2);
+        }
+
         for (let i = 0; i < 5; i++) {
             const angle = Math.PI * 1.15 + (i / 4) * (Math.PI * 0.7);
             const fx = cx + Math.cos(angle) * 60;
             const fy = cy + 20 + Math.sin(angle) * 60;
             const tipX = cx + Math.cos(angle) * 95;
             const tipY = cy + 20 + Math.sin(angle) * 95;
-            ctx.strokeStyle = fingerColors[i]; ctx.lineWidth = 6; ctx.lineCap = "round";
+            // 活跃手指更粗更亮
+            const isActive = i === activeFinger && frame < 360;
+            ctx.strokeStyle = fingerColors[i]; ctx.lineWidth = isActive ? 9 : 6; ctx.lineCap = "round";
             ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tipX, tipY); ctx.stroke();
-            // 指尖圆点
             ctx.fillStyle = fingerColors[i];
-            ctx.beginPath(); ctx.arc(tipX, tipY, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(tipX, tipY, isActive ? 7 : 5, 0, Math.PI * 2); ctx.fill();
+            // 指法编号
+            ctx.fillStyle = isActive ? fingerColors[i] : "#AAAAAA";
+            ctx.font = isActive ? "bold 12px 微软雅黑" : "10px 微软雅黑";
+            ctx.textAlign = "center";
+            ctx.fillText(i + 1, tipX, tipY + 18);
         }
 
         // 鸡蛋
@@ -243,12 +345,9 @@ function animHandShape(ctx, cv) {
         ctx.beginPath(); ctx.ellipse(cx, eggY, 16, 22, 0, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = "#FFB84D"; ctx.lineWidth = 2; ctx.stroke();
 
-        // 标注
         ctx.textAlign = "center";
         ctx.fillStyle = "#6B688A"; ctx.font = "12px 微软雅黑";
-        ctx.fillText("🥚 手心握鸡蛋，不能捏碎", cx, 12);
-        ctx.fillStyle = "#FF6B9D"; ctx.font = "bold 11px 微软雅黑";
-        ctx.fillText("1  2  3  4  5", cx, H - 5);
+        ctx.fillText("手心握鸡蛋，不能捏碎", cx, 12);
 
         frame++;
         if (frame < 500) requestAnimationFrame(draw);
@@ -256,26 +355,25 @@ function animHandShape(ctx, cv) {
     draw();
 }
 
-// 动画3：节奏 — 下落音符方块（四分/八分/二分）
+// 动画3：节奏 — 下落音符方块（四分/八分/二分）+ 拍点声
 function animRhythm(ctx, cv) {
     const W = cv.width, H = cv.height;
-    const lineY = H - 25; // 判定线
-    // 节奏型：四分 四分 八分八分 四分 二分
+    const lineY = H - 25;
     const notes = [
-        { start: 0, dur: 30, color: "#FF6B9D", label: "ta" },
-        { start: 30, dur: 30, color: "#FF6B9D", label: "ta" },
-        { start: 60, dur: 15, color: "#FFB84D", label: "ti" },
-        { start: 75, dur: 15, color: "#FFB84D", label: "ti" },
-        { start: 90, dur: 30, color: "#FF6B9D", label: "ta" },
-        { start: 120, dur: 60, color: "#4FC3F7", label: "ta-a" },
+        { start: 0, dur: 30, color: "#FF6B9D", label: "ta", freq: NOTE_FREQ["C4"] },
+        { start: 30, dur: 30, color: "#FF6B9D", label: "ta", freq: NOTE_FREQ["D4"] },
+        { start: 60, dur: 15, color: "#FFB84D", label: "ti", freq: NOTE_FREQ["E4"] },
+        { start: 75, dur: 15, color: "#FFB84D", label: "ti", freq: NOTE_FREQ["F4"] },
+        { start: 90, dur: 30, color: "#FF6B9D", label: "ta", freq: NOTE_FREQ["G4"] },
+        { start: 120, dur: 60, color: "#4FC3F7", label: "ta-a", freq: NOTE_FREQ["C5"] },
     ];
     const fallSpeed = 2.5;
     const totalFrames = 200;
     let frame = 0;
+    let playedNotes = new Set();
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        // 判定线
         ctx.strokeStyle = "rgba(255,107,157,0.4)"; ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         ctx.beginPath(); ctx.moveTo(0, lineY); ctx.lineTo(W, lineY); ctx.stroke();
@@ -283,7 +381,6 @@ function animRhythm(ctx, cv) {
         ctx.fillStyle = "#FF6B9D"; ctx.font = "10px 微软雅黑"; ctx.textAlign = "left";
         ctx.fillText("弹奏线", 4, lineY - 4);
 
-        // 下落音符
         const colW = W / 6;
         notes.forEach((n, i) => {
             const noteFrame = frame - n.start * 2;
@@ -291,21 +388,25 @@ function animRhythm(ctx, cv) {
             const x = colW * i + 10;
             const h = n.dur * 1.2;
             let y;
-            if (noteFrame < 30) {
-                // 下落中
-                y = lineY - h - (30 - noteFrame) * fallSpeed;
-            } else {
-                y = lineY - h; // 到达判定线停留
+            if (noteFrame < 30) { y = lineY - h - (30 - noteFrame) * fallSpeed; }
+            else { y = lineY - h; }
+
+            // 音符到达弹奏线时播放声音
+            if (noteFrame >= 30 && !playedNotes.has(i)) {
+                playedNotes.add(i);
+                playNote(n.freq, n.dur > 30 ? 0.8 : 0.3, 0.25);
+                playClap(0.15); // 拍手声
             }
-            // 方块
-            ctx.fillStyle = n.color;
+
+            // 到达时方块发光
+            const hit = noteFrame >= 30 && noteFrame < 36;
+            ctx.fillStyle = hit ? "#FFFFFF" : n.color;
             ctx.fillRect(x, y, colW - 20, h);
-            // 标签
+            if (hit) { ctx.fillStyle = n.color; ctx.fillRect(x + 2, y + 2, colW - 24, h - 4); }
             ctx.fillStyle = "#FFFFFF"; ctx.font = "bold 10px 微软雅黑"; ctx.textAlign = "center";
             ctx.fillText(n.label, x + (colW - 20) / 2, y + h / 2 + 3);
         });
 
-        // 节拍指示
         const beat = Math.floor(frame / 30) % 4;
         ctx.fillStyle = "#6B688A"; ctx.font = "11px 微软雅黑"; ctx.textAlign = "center";
         const labels = ["四分", "四分", "八分八分", "四分"];

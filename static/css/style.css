@@ -174,6 +174,21 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 .anim-container { margin-top:12px; padding:8px; background:rgba(255,255,255,0.6); border-radius:10px; display:flex; justify-content:center; }
 .anim-canvas { max-width:100%; height:auto; border-radius:8px; }
 
+/* ===== 教案漫画 ===== */
+.comic-btn { margin-top:12px; padding:8px 16px; background:var(--primary); color:var(--white); border:none; border-radius:10px; font-size:13px; cursor:pointer; font-family:inherit; font-weight:600; transition:all 0.2s; }
+.comic-btn:hover { background:var(--pink); }
+.comic-btn:disabled { background:var(--light-gray); cursor:not-allowed; }
+.comic-strip { margin-top:14px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.comic-panel { border:2px solid; border-radius:12px; padding:12px 10px; text-align:center; position:relative; animation:panelIn 0.4s ease; }
+@keyframes panelIn { from{opacity:0;transform:scale(0.8);} to{opacity:1;transform:scale(1);} }
+.comic-panel:nth-child(1){animation-delay:0s;} .comic-panel:nth-child(2){animation-delay:0.15s;} .comic-panel:nth-child(3){animation-delay:0.3s;}
+.comic-panel:nth-child(4){animation-delay:0.45s;} .comic-panel:nth-child(5){animation-delay:0.6s;} .comic-panel:nth-child(6){animation-delay:0.75s;}
+.comic-panel-num { position:absolute; top:-8px; left:-8px; width:22px; height:22px; border-radius:50%; color:var(--white); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.comic-emoji { font-size:28px; margin-bottom:6px; }
+.comic-char { font-size:11px; font-weight:700; margin-bottom:3px; }
+.comic-scene { font-size:10px; color:var(--gray); margin-bottom:5px; padding:2px 8px; background:rgba(255,255,255,0.6); border-radius:6px; display:inline-block; }
+.comic-text { font-size:12px; color:var(--dark); line-height:1.5; }
+
 /* ===== 平板 (≤1024px) ===== */
 @media (max-width:1024px) {
     .dash-col-charts { width:180px; }
@@ -229,4 +244,10 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 
     .help-modal { max-height:80vh; }
     .help-body { padding:14px; }
+
+    /* 漫画手机端单列 */
+    .comic-strip { grid-template-columns:1fr 1fr; gap:6px; }
+    .comic-panel { padding:10px 8px; }
+    .comic-emoji { font-size:24px; }
+    .comic-text { font-size:11px; }
 }

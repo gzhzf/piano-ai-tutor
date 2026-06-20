@@ -105,6 +105,69 @@ def chat():
     })
 
 
+@app.route("/api/comic", methods=["POST"])
+def comic():
+    """生成教案漫画（SVG分格）"""
+    data = request.json
+    topic = data.get("topic", "中央C")
+
+    # 根据主题生成6格漫画内容
+    comics = {
+        "中央C": [
+            {"scene": "导入", "char": "老师", "emoji": "👩‍🏫", "bg": "#FFF5F8",
+             "text": "今天我们来认识钢琴最重要的音——中央C！", "color": "#FF6B9D"},
+            {"scene": "示范", "char": "老师", "emoji": "🎹", "bg": "#FFF8EE",
+             "text": "看，两个黑键左边第一个白键就是中央C", "color": "#FFB84D"},
+            {"scene": "练习", "char": "学生", "emoji": "🧒", "bg": "#F0FCF8",
+             "text": "找到了！用大拇指轻轻按一下~", "color": "#5FC9A8"},
+            {"scene": "跟灯", "char": "AI助手", "emoji": "💡", "bg": "#F0F8FF",
+             "text": "跟灯模式开启，LED灯指引你弹对位置", "color": "#4FC3F7"},
+            {"scene": "纠错", "char": "AI助手", "emoji": "✅", "bg": "#F0FCF8",
+             "text": "太棒了！准确率95%，中央C弹对了！", "color": "#5FC9A8"},
+            {"scene": "鼓励", "char": "老师", "emoji": "🌟", "bg": "#FFF5F8",
+             "text": "你真棒！中央C侦探勋章送给你！", "color": "#FF6B9D"},
+        ],
+        "巴赫": [
+            {"scene": "聆听", "char": "老师", "emoji": "👂", "bg": "#FFF5F8",
+             "text": "先听一遍巴赫小步舞曲，感受3/4拍韵律", "color": "#FF6B9D"},
+            {"scene": "分手", "char": "学生", "emoji": "✋", "bg": "#FFF8EE",
+             "text": "右手先练D5下行音阶，大拇指起句", "color": "#FFB84D"},
+            {"scene": "跟灯", "char": "AI助手", "emoji": "💡", "bg": "#F0F8FF",
+             "text": "60BPM慢速跟灯，Visual guide关联五线谱", "color": "#4FC3F7"},
+            {"scene": "循环", "char": "AI助手", "emoji": "🔄", "bg": "#F0FCF8",
+             "text": "装饰音小节循环10遍，十次法则！", "color": "#5FC9A8"},
+            {"scene": "合手", "char": "学生", "emoji": "🤲", "bg": "#FFF8EE",
+             "text": "双手合奏！第一拍重音，强-弱-弱", "color": "#FFB84D"},
+            {"scene": "展示", "char": "老师", "emoji": "👏", "bg": "#FFF5F8",
+             "text": "优雅的小步舞曲！巴洛克风格满分！", "color": "#FF6B9D"},
+        ],
+        "default": [
+            {"scene": "导入", "char": "老师", "emoji": "👩‍🏫", "bg": "#FFF5F8",
+             "text": "今天我们来学一首新曲子！", "color": "#FF6B9D"},
+            {"scene": "识谱", "char": "老师", "emoji": "📖", "bg": "#FFF8EE",
+             "text": "先看谱子，认识音符和节奏", "color": "#FFB84D"},
+            {"scene": "练习", "char": "学生", "emoji": "🧒", "bg": "#F0FCF8",
+             "text": "跟灯慢练，一个音一个音弹准", "color": "#5FC9A8"},
+            {"scene": "纠错", "char": "AI助手", "emoji": "✅", "bg": "#F0F8FF",
+             "text": "AI检测准确率，错音即时提醒", "color": "#4FC3F7"},
+            {"scene": "熟练", "char": "学生", "emoji": "🎹", "bg": "#FFF8EE",
+             "text": "越来越熟练了！加速练习", "color": "#FFB84D"},
+            {"scene": "鼓励", "char": "老师", "emoji": "🌟", "bg": "#FFF5F8",
+             "text": "太棒了！继续加油！", "color": "#FF6B9D"},
+        ]
+    }
+
+    # 选择漫画内容
+    if "巴赫" in topic or "小步舞曲" in topic:
+        panels = comics["巴赫"]
+    elif "中央C" in topic or "中央c" in topic:
+        panels = comics["中央C"]
+    else:
+        panels = comics["default"]
+
+    return jsonify({"topic": topic, "panels": panels})
+
+
 @app.route("/api/quick-questions")
 def quick_questions():
     """快捷问题"""
