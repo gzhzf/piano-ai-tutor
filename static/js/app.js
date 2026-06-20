@@ -1319,61 +1319,6 @@ function showTyping() {
 }
 function hideTyping() { const t = document.getElementById("typingMsg"); if (t) t.remove(); }
 
-// ===== 工作流：动态加载曲目 =====
-async function loadWorkflowPieces() {
-    try {
-        const res = await fetch("/api/lesson-plans");
-        const data = await res.json();
-        const select = document.getElementById("wfContent");
-        select.innerHTML = "";
-        data.groups.forEach(group => {
-            const og = document.createElement("optgroup"); og.label = group.label;
-            group.pieces.forEach(p => {
-                const opt = document.createElement("option"); opt.value = p.name; opt.textContent = p.name;
-                og.appendChild(opt);
-            });
-            select.appendChild(og);
-        });
-    } catch(e) { console.error(e); }
-}
-
-// ===== 工作流演示 =====
-document.getElementById("wfRunBtn").addEventListener("click", async () => {
-    const btn = document.getElementById("wfRunBtn");
-    const flow = document.getElementById("wfFlow");
-    btn.disabled = true; btn.textContent = "生成中..."; flow.innerHTML = "";
-    const params = {
-        grade: document.getElementById("wfGrade").value,
-        content: document.getElementById("wfContent").value,
-        duration: document.getElementById("wfDuration").value
-    };
-    try {
-        const res = await fetch("/api/workflow", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(params) });
-        const data = await res.json();
-        const steps = data.steps;
-        const colors = ["#FF6B9D","#FFB84D","#5FC9A8","#4FC3F7"];
-        for (let i = 0; i < steps.length; i++) {
-            await sleep(700);
-            const step = steps[i];
-            if (step.final) {
-                const final = document.createElement("div"); final.className = "wf-final";
-                final.innerHTML = `<div class="wf-final-title">${step.title}</div><div class="wf-final-content">${formatText(step.content)}</div>`;
-                flow.appendChild(final);
-            } else {
-                const stepEl = document.createElement("div"); stepEl.className = "wf-step";
-                stepEl.innerHTML = `<div class="wf-step-num" style="background:${colors[i]}">${i+1}</div><div class="wf-step-content"><div class="wf-step-title">${step.title}</div><div class="wf-step-text">${formatText(step.content)}</div></div>`;
-                flow.appendChild(stepEl);
-                if (i < steps.length - 1) { const arrow = document.createElement("div"); arrow.className = "wf-arrow"; arrow.textContent = "▼"; flow.appendChild(arrow); }
-            }
-            flow.scrollTop = flow.scrollHeight;
-        }
-        btn.disabled = false; btn.textContent = "▶ 重新生成";
-    } catch(e) {
-        flow.innerHTML = '<div class="wf-placeholder">生成失败，请重试</div>';
-        btn.disabled = false; btn.textContent = "▶ 开始生成";
-    }
-});
-
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ===== 教案库 =====
@@ -1416,7 +1361,6 @@ document.getElementById("libSearch").addEventListener("input", (e) => {
 
 // ===== 初始化 =====
 loadQuickQuestions();
-loadWorkflowPieces();
 loadLibrary();
 initDashboard();
 
