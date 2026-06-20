@@ -35,9 +35,15 @@ function initWelcomeAnim() {
     let mIdx = 0, lastBeat = 0, isPlaying = true, frame = 0;
     const beatInt = 36, playDur = 600;
 
-    // 播放Aerith's Theme原曲音频
+    // 播放Aerith's Theme原曲音频（兼容手机：首次点击触发）
     const audio = document.getElementById("welcomeAudio");
-    if (audio) { audio.volume = 0.5; audio.play().catch(()=>{}); }
+    if (audio) { audio.volume = 0.5; }
+    function tryPlayAudio() {
+        if (audio && audio.paused) { audio.play().catch(()=>{}); }
+    }
+    tryPlayAudio();
+    document.body.addEventListener("touchstart", tryPlayAudio, { once: true });
+    document.body.addEventListener("click", tryPlayAudio, { once: true });
 
     function draw() {
         ctx.clearRect(0, 0, W, H);

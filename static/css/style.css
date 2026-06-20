@@ -42,7 +42,7 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 .welcome-msg { text-align:center; padding-top:20px; }
 .welcome-stage { width:100%; max-width:480px; margin:0 auto 16px; border-radius:16px; overflow:hidden; box-shadow:0 8px 30px rgba(74,63,142,0.25); position:relative; }
 .welcome-img { width:100%; height:auto; display:block; }
-.welcome-canvas { width:100%; height:auto; display:block; position:absolute; top:0; left:0; }
+.welcome-canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
 .welcome-msg h2 { color:var(--primary); font-size:20px; margin-bottom:8px; }
 .welcome-msg p { color:var(--gray); font-size:14px; line-height:1.8; max-width:480px; margin:0 auto; }
 
@@ -267,9 +267,11 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
     .help-btn { padding:4px 10px; font-size:12px; }
 
     .chat-messages { padding:14px 12px; }
-    .welcome-msg { padding-top:30px; }
-    .welcome-msg h2 { font-size:18px; }
-    .welcome-msg p { font-size:13px; }
+    .welcome-msg { padding-top:10px; }
+    .welcome-stage { max-width:100%; border-radius:12px; }
+    .welcome-img { width:100%; }
+    .welcome-msg h2 { font-size:17px; }
+    .welcome-msg p { font-size:12px; }
     .bubble { max-width:85%; font-size:13px; padding:10px 14px; }
     .ai-avatar { width:34px; height:34px; font-size:16px; }
     .quick-questions { padding:0 12px 4px; }
