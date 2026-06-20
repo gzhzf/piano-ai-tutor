@@ -152,7 +152,7 @@ function appendComicButton(bubble, userMsg) {
 
 // ===== 加载教案漫画 =====
 async function loadComic(userMsg, btn) {
-    const bubble = btn.parentElement; // 先保存引用，remove后就找不到了
+    const bubble = btn.parentElement;
     btn.disabled = true; btn.textContent = "生成中...";
     try {
         const res = await fetch("/api/comic", {
@@ -161,20 +161,23 @@ async function loadComic(userMsg, btn) {
         });
         const data = await res.json();
         btn.remove();
-        // 在当前气泡内插入漫画
         const comicEl = document.createElement("div");
         comicEl.className = "comic-strip";
         data.panels.forEach((p, idx) => {
             const panel = document.createElement("div");
-            panel.className = "comic-panel";
-            panel.style.borderColor = p.color;
-            panel.style.background = p.bg;
+            panel.className = "comic-panel comic-speaker-" + p.speaker;
             panel.innerHTML = `
-                <div class="comic-panel-num" style="background:${p.color}">${idx + 1}</div>
-                <div class="comic-emoji">${p.emoji}</div>
-                <div class="comic-char" style="color:${p.color}">${p.char}</div>
-                <div class="comic-scene">${p.scene}</div>
-                <div class="comic-text">${p.text}</div>
+                <div class="comic-panel-header">
+                    <span class="comic-panel-num">${idx + 1}</span>
+                    <span class="comic-action">${p.action}</span>
+                </div>
+                <div class="comic-scene-wrap">
+                    ${svgChar(p.speaker, p.expression)}
+                    <div class="comic-dialogue">
+                        <div class="comic-speaker-name">${speakerName(p.speaker)}</div>
+                        <div class="comic-dialogue-text">${p.text}</div>
+                    </div>
+                </div>
             `;
             comicEl.appendChild(panel);
         });
@@ -184,6 +187,99 @@ async function loadComic(userMsg, btn) {
         console.error("漫画加载失败:", e);
         btn.disabled = false; btn.textContent = "🎨 查看漫画教案（重试）";
     }
+}
+
+function speakerName(s) {
+    return { teacher: "老师", student: "小明", ai: "AI助手" }[s] || s;
+}
+
+// SVG卡通人物头像
+function svgChar(type, expression) {
+    const w = 80, h = 90;
+    let svg = `<svg viewBox="0 0 ${w} ${h}" class="comic-char-svg">`;
+
+    if (type === "teacher") {
+        // 老师：长发+眼镜+微笑
+        svg += `<rect x="0" y="0" width="${w}" height="${h}" fill="none"/>`;
+        // 头发
+        svg += `<path d="M20,30 Q20,12 40,12 Q60,12 60,30 L60,55 Q60,60 55,58 L50,50 L30,50 L25,58 Q20,60 20,55 Z" fill="#4A3F8E"/>`;
+        // 脸
+        svg += `<ellipse cx="40" cy="38" rx="16" ry="18" fill="#FFD9B8"/>`;
+        // 眼镜
+        svg += `<circle cx="34" cy="36" r="5" fill="none" stroke="#4A3F8E" stroke-width="1.5"/>`;
+        svg += `<circle cx="46" cy="36" r="5" fill="none" stroke="#4A3F8E" stroke-width="1.5"/>`;
+        svg += `<line x1="39" y1="36" x2="41" y2="36" stroke="#4A3F8E" stroke-width="1.5"/>`;
+        // 表情
+        if (expression === "proud") {
+            svg += `<path d="M33,44 Q40,50 47,44" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+            svg += `<text x="54" y="30" font-size="10">✨</text>`;
+        } else if (expression === "explain") {
+            svg += `<path d="M35,46 L45,46" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
+        } else {
+            svg += `<path d="M33,44 Q40,48 47,44" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
+        }
+        // 身体（衣服）
+        svg += `<path d="M28,60 L52,60 L56,85 L24,85 Z" fill="#FF6B9D"/>`;
+        svg += `<rect x="38" y="60" width="4" height="10" fill="#E55588"/>`;
+
+    } else if (type === "student") {
+        // 学生：小男孩平头+圆脸
+        svg += `<rect x="0" y="0" width="${w}" height="${h}" fill="none"/>`;
+        // 头发（短发）
+        svg += `<path d="M22,32 Q22,14 40,14 Q58,14 58,32 L56,28 L52,30 L48,28 L44,30 L40,28 L36,30 L32,28 L28,30 L24,28 Z" fill="#3A2D1A"/>`;
+        // 脸
+        svg += `<ellipse cx="40" cy="36" rx="16" ry="17" fill="#FFE0C0"/>`;
+        // 眼睛
+        if (expression === "happy") {
+            svg += `<path d="M32,34 Q34,32 36,34" fill="none" stroke="#333" stroke-width="1.5"/>`;
+            svg += `<path d="M44,34 Q46,32 48,34" fill="none" stroke="#333" stroke-width="1.5"/>`;
+            svg += `<path d="M34,42 Q40,48 46,42" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+        } else if (expression === "worry") {
+            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
+            svg += `<path d="M35,44 Q40,41 45,44" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+            svg += `<text x="56" y="28" font-size="10">💧</text>`;
+        } else if (expression === "focus") {
+            svg += `<line x1="32" y1="35" x2="36" y2="35" stroke="#333" stroke-width="2"/>`;
+            svg += `<line x1="44" y1="35" x2="48" y2="35" stroke="#333" stroke-width="2"/>`;
+            svg += `<path d="M36,43 L44,43" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+        } else {
+            svg += `<circle cx="34" cy="35" r="1.5" fill="#333"/><circle cx="46" cy="35" r="1.5" fill="#333"/>`;
+            svg += `<path d="M35,42 Q40,45 45,42" fill="none" stroke="#C44" stroke-width="1.5"/>`;
+        }
+        // 身体（T恤）
+        svg += `<path d="M28,56 L52,56 L54,85 L26,85 Z" fill="#4FC3F7"/>`;
+
+    } else if (type === "ai") {
+        // AI助手：机器人+天线+屏幕脸
+        svg += `<rect x="0" y="0" width="${w}" height="${h}" fill="none"/>`;
+        // 天线
+        svg += `<line x1="40" y1="14" x2="40" y2="8" stroke="#4A3F8E" stroke-width="2"/>`;
+        svg += `<circle cx="40" cy="7" r="3" fill="#FF6B9D"/>`;
+        // 头（圆角矩形）
+        svg += `<rect x="22" y="14" width="36" height="38" rx="8" fill="#E8E5F5" stroke="#4A3F8E" stroke-width="2"/>`;
+        // 屏幕脸
+        svg += `<rect x="26" y="20" width="28" height="20" rx="4" fill="#2D2A4A"/>`;
+        // 眼睛（LED风格）
+        if (expression === "praise" || expression === "encourage") {
+            svg += `<circle cx="34" cy="30" r="3" fill="#5FC9A8"/>`;
+            svg += `<circle cx="46" cy="30" r="3" fill="#5FC9A8"/>`;
+            svg += `<path d="M34,35 Q40,38 46,35" fill="none" stroke="#5FC9A8" stroke-width="1.5"/>`;
+        } else {
+            svg += `<circle cx="34" cy="30" r="3" fill="#4FC3F7"/>`;
+            svg += `<circle cx="46" cy="30" r="3" fill="#4FC3F7"/>`;
+            svg += `<line x1="35" y1="36" x2="45" y2="36" stroke="#4FC3F7" stroke-width="1.5"/>`;
+        }
+        // 身体
+        svg += `<rect x="26" y="52" width="28" height="25" rx="4" fill="#4A3F8E"/>`;
+        svg += `<circle cx="34" cy="64" r="2" fill="#FFB84D"/>`;
+        svg += `<circle cx="40" cy="64" r="2" fill="#5FC9A8"/>`;
+        svg += `<circle cx="46" cy="64" r="2" fill="#FF6B9D"/>`;
+    }
+
+    svg += `</svg>`;
+    return svg;
 }
 
 // ===== 内嵌Canvas动画 =====

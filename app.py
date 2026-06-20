@@ -107,57 +107,39 @@ def chat():
 
 @app.route("/api/comic", methods=["POST"])
 def comic():
-    """生成教案漫画（SVG分格）"""
+    """生成教案漫画（对话式分格）"""
     data = request.json
     topic = data.get("topic", "中央C")
 
-    # 根据主题生成6格漫画内容
+    # 角色定义：teacher=老师, student=学生, ai=AI助手
+    # 每格：speaker(说话者) + text(对话内容) + action(场景描述) + expression(表情)
     comics = {
         "中央C": [
-            {"scene": "导入", "char": "老师", "emoji": "👩‍🏫", "bg": "#FFF5F8",
-             "text": "今天我们来认识钢琴最重要的音——中央C！", "color": "#FF6B9D"},
-            {"scene": "示范", "char": "老师", "emoji": "🎹", "bg": "#FFF8EE",
-             "text": "看，两个黑键左边第一个白键就是中央C", "color": "#FFB84D"},
-            {"scene": "练习", "char": "学生", "emoji": "🧒", "bg": "#F0FCF8",
-             "text": "找到了！用大拇指轻轻按一下~", "color": "#5FC9A8"},
-            {"scene": "跟灯", "char": "AI助手", "emoji": "💡", "bg": "#F0F8FF",
-             "text": "跟灯模式开启，LED灯指引你弹对位置", "color": "#4FC3F7"},
-            {"scene": "纠错", "char": "AI助手", "emoji": "✅", "bg": "#F0FCF8",
-             "text": "太棒了！准确率95%，中央C弹对了！", "color": "#5FC9A8"},
-            {"scene": "鼓励", "char": "老师", "emoji": "🌟", "bg": "#FFF5F8",
-             "text": "你真棒！中央C侦探勋章送给你！", "color": "#FF6B9D"},
+            {"speaker": "teacher", "text": "同学们，今天我们来认识钢琴上最重要的音——中央C！", "action": "课堂导入", "expression": "smile"},
+            {"speaker": "teacher", "text": "看这里！两个黑键左边第一个白键，就是中央C哦~", "action": "教师示范", "expression": "explain"},
+            {"speaker": "student", "text": "老师我找到了！用大拇指轻轻按一下...叮咚！", "action": "学生弹奏", "expression": "happy"},
+            {"speaker": "ai", "text": "跟灯模式已开启，LED灯会指引你弹对位置~", "action": "AI辅助", "expression": "help"},
+            {"speaker": "ai", "text": "太棒了！准确率95%，中央C弹对了！", "action": "AI反馈", "expression": "praise"},
+            {"speaker": "teacher", "text": "你真棒！「中央C侦探」勋章送给你！", "action": "颁发勋章", "expression": "proud"},
         ],
         "巴赫": [
-            {"scene": "聆听", "char": "老师", "emoji": "👂", "bg": "#FFF5F8",
-             "text": "先听一遍巴赫小步舞曲，感受3/4拍韵律", "color": "#FF6B9D"},
-            {"scene": "分手", "char": "学生", "emoji": "✋", "bg": "#FFF8EE",
-             "text": "右手先练D5下行音阶，大拇指起句", "color": "#FFB84D"},
-            {"scene": "跟灯", "char": "AI助手", "emoji": "💡", "bg": "#F0F8FF",
-             "text": "60BPM慢速跟灯，Visual guide关联五线谱", "color": "#4FC3F7"},
-            {"scene": "循环", "char": "AI助手", "emoji": "🔄", "bg": "#F0FCF8",
-             "text": "装饰音小节循环10遍，十次法则！", "color": "#5FC9A8"},
-            {"scene": "合手", "char": "学生", "emoji": "🤲", "bg": "#FFF8EE",
-             "text": "双手合奏！第一拍重音，强-弱-弱", "color": "#FFB84D"},
-            {"scene": "展示", "char": "老师", "emoji": "👏", "bg": "#FFF5F8",
-             "text": "优雅的小步舞曲！巴洛克风格满分！", "color": "#FF6B9D"},
+            {"speaker": "teacher", "text": "今天我们学巴赫G大调小步舞曲，先听一遍感受3/4拍~", "action": "聆听曲目", "expression": "smile"},
+            {"speaker": "student", "text": "老师，右手D5开始弹吗？大拇指起句对吗？", "action": "分手练习", "expression": "think"},
+            {"speaker": "ai", "text": "对的！60BPM慢速跟灯，Visual guide关联五线谱~", "action": "跟灯慢练", "expression": "help"},
+            {"speaker": "student", "text": "装饰音这里有点难...上波音G-A-G总是弹慢", "action": "遇到困难", "expression": "worry"},
+            {"speaker": "ai", "text": "别急！循环练习这个小节10遍，十次法则！", "action": "循环攻坚", "expression": "encourage"},
+            {"speaker": "teacher", "text": "双手合奏很优雅！巴洛克风格满分！", "action": "成果展示", "expression": "proud"},
         ],
         "default": [
-            {"scene": "导入", "char": "老师", "emoji": "👩‍🏫", "bg": "#FFF5F8",
-             "text": "今天我们来学一首新曲子！", "color": "#FF6B9D"},
-            {"scene": "识谱", "char": "老师", "emoji": "📖", "bg": "#FFF8EE",
-             "text": "先看谱子，认识音符和节奏", "color": "#FFB84D"},
-            {"scene": "练习", "char": "学生", "emoji": "🧒", "bg": "#F0FCF8",
-             "text": "跟灯慢练，一个音一个音弹准", "color": "#5FC9A8"},
-            {"scene": "纠错", "char": "AI助手", "emoji": "✅", "bg": "#F0F8FF",
-             "text": "AI检测准确率，错音即时提醒", "color": "#4FC3F7"},
-            {"scene": "熟练", "char": "学生", "emoji": "🎹", "bg": "#FFF8EE",
-             "text": "越来越熟练了！加速练习", "color": "#FFB84D"},
-            {"scene": "鼓励", "char": "老师", "emoji": "🌟", "bg": "#FFF5F8",
-             "text": "太棒了！继续加油！", "color": "#FF6B9D"},
+            {"speaker": "teacher", "text": "今天我们来学一首新曲子，准备好了吗？", "action": "课堂导入", "expression": "smile"},
+            {"speaker": "student", "text": "准备好了！我先看谱子认识音符~", "action": "识谱", "expression": "think"},
+            {"speaker": "student", "text": "跟灯慢练，一个音一个音弹准...", "action": "跟灯练习", "expression": "focus"},
+            {"speaker": "ai", "text": "检测到2个错音，已高亮标记，注意这里~", "action": "AI纠错", "expression": "help"},
+            {"speaker": "student", "text": "再来一遍！这次准确率98%了！", "action": "再次练习", "expression": "happy"},
+            {"speaker": "teacher", "text": "进步很大！继续加油，下周学新曲子~", "action": "课堂总结", "expression": "proud"},
         ]
     }
 
-    # 选择漫画内容
     if "巴赫" in topic or "小步舞曲" in topic:
         panels = comics["巴赫"]
     elif "中央C" in topic or "中央c" in topic:
