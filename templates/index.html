@@ -20,7 +20,7 @@
             <div class="topbar-center">
                 <nav class="view-tabs">
                 <button class="tab-btn active" data-view="chat">💬 对话</button>
-                <button class="tab-btn" data-view="library">📚 教案库</button>
+                <button class="tab-btn" data-view="library">📚 教学资源</button>
                 <button class="tab-btn" data-view="dashboard">📊 教学评价</button>
                 </nav>
             </div>
@@ -119,17 +119,54 @@
             </div>
         </div>
 
-        <!-- ========== 视图3：教案库 ========== -->
+        <!-- ========== 视图3：教学资源（Tomplay风格） ========== -->
         <div class="view view-library" id="view-library">
             <div class="lib-intro">
-                <h2>📚 曲目教案库</h2>
-                <p>30首6-9岁儿童钢琴曲目 · 按难度分级 · 点击即生成教案</p>
+                <h2>📚 教学资源</h2>
+                <p>上传教案与曲谱 · AI生成教案 · 按难度浏览曲目</p>
             </div>
-            <div class="lib-search">
-                <input type="text" id="libSearch" placeholder="搜索曲目名称..." class="lib-search-input">
+            <!-- 上传按钮 -->
+            <div class="lib-upload-bar">
+                <button class="upload-btn" id="uploadBtn">📤 上传教案/曲谱</button>
+                <input type="text" id="libSearch" placeholder="搜索曲目..." class="lib-search-input">
             </div>
+            <!-- 已上传资源 -->
+            <div class="uploaded-section" id="uploadedSection" style="display:none;">
+                <div class="uploaded-title">📎 已上传资源</div>
+                <div class="uploaded-list" id="uploadedList"></div>
+            </div>
+            <!-- 曲目卡片网格 -->
             <div class="lib-grid" id="libGrid">
                 <div class="lib-loading">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 上传弹窗 -->
+        <div class="upload-overlay" id="uploadOverlay">
+            <div class="upload-modal">
+                <div class="upload-header">
+                    <span>📤 上传教学资源</span>
+                    <button class="upload-close" id="uploadClose">✕</button>
+                </div>
+                <div class="upload-body">
+                    <div class="upload-field">
+                        <label>资源类型</label>
+                        <select id="uploadType">
+                            <option value="score">🎼 曲谱</option>
+                            <option value="plan">📄 教案</option>
+                        </select>
+                    </div>
+                    <div class="upload-field">
+                        <label>关联曲目</label>
+                        <select id="uploadPiece"></select>
+                    </div>
+                    <div class="upload-field">
+                        <label>选择文件</label>
+                        <input type="file" id="uploadFile" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp">
+                    </div>
+                    <button class="upload-submit" id="uploadSubmit">上传</button>
+                    <div class="upload-result" id="uploadResult"></div>
+                </div>
             </div>
         </div>
 

@@ -7,7 +7,13 @@ from flask import Flask, render_template, request, jsonify
 from engine.matcher import generate_response, get_quick_questions, get_workflow_steps
 from engine.knowledge_base import get_all_knowledge
 from engine.repertoire import ALL_REPERTOIRE, LEVEL_INDEX, get_repertoire_by_level, search_repertoire
-import hashlib, random
+import hashlib, random, os, time
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# 教学资源存储（内存中，重启后保留已上传文件但列表清空）
+RESOURCES = []
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
@@ -183,12 +189,21 @@ def chat():
     elif intent == "rhythm_train":
         animation = "节奏"
 
+    # 检查是否有上传的教学资源可引用
+    related_resources = []
+    if intent == "lesson_plan":
+        for r in RESOURCES:
+            if r.get("piece") and (r["piece"] in message or message in r["piece"] or
+               any(k in r["piece"] for k in ["巴赫", "小步舞曲", "小星星", "欢乐颂"] if k in message)):
+                related_resources.append({"filename": r["filename"], "url": r["url"], "type": r["type"]})
+
     return jsonify({
         "reply": reply,
         "intent": intent,
         "assistant": assistant_info,
         "role": role,
-        "animation": animation
+        "animation": animation,
+        "resources": related_resources
     })
 
 
@@ -452,6 +467,79 @@ def workflow():
 def knowledge():
     """知识库数据（RAG展示）"""
     return jsonify(get_all_knowledge())
+
+
+# ============ 教学资源上传与管理 ============
+@app.route("/api/upload", methods=["POST"])
+def upload_file():
+    """上传教案/曲谱文件"""
+    if "file" not in request.files:
+        return jsonify({"error": "未选择文件"}), 400
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "文件名为空"}), 400
+
+    file_type = request.form.get("type", "score")  # score=曲谱, plan=教案
+    piece = request.form.get("piece", "")
+
+    # 安全文件名
+    safe_name = f"resource_{int(time.time())}_{f.filename}"
+    safe_name = safe_name.replace(" ", "_").replace("/", "_")
+    filepath = os.path.join(UPLOAD_DIR, safe_name)
+    f.save(filepath)
+
+    is_image = f.filename.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp"))
+
+    resource = {
+        "id": f"r{len(RESOURCES) + 1}",
+        "filename": f.filename,
+        "type": file_type,
+        "piece": piece,
+        "url": f"/static/uploads/{safe_name}",
+        "is_image": is_image,
+        "size": os.path.getsize(filepath),
+        "time": int(time.time())
+    }
+    RESOURCES.append(resource)
+    return jsonify({"success": True, "resource": resource})
+
+
+@app.route("/api/resources")
+def get_resources():
+    """获取教学资源列表"""
+    piece = request.args.get("piece", "")
+    if piece:
+        filtered = [r for r in RESOURCES if piece in r.get("piece", "") or r.get("piece", "") in piece]
+    else:
+        filtered = RESOURCES
+    return jsonify({"resources": filtered, "count": len(filtered)})
+
+
+@app.route("/api/resources/<rid>", methods=["DELETE"])
+def delete_resource(rid):
+    """删除教学资源"""
+    global RESOURCES
+    target = None
+    for r in RESOURCES:
+        if r["id"] == rid:
+            target = r
+            break
+    if target:
+        try:
+            os.remove(os.path.join(UPLOAD_DIR, os.path.basename(target["url"])))
+        except:
+            pass
+        RESOURCES = [r for r in RESOURCES if r["id"] != rid]
+        return jsonify({"success": True})
+    return jsonify({"error": "资源不存在"}), 404
+
+
+@app.route("/api/resources/check")
+def check_resources():
+    """检查某曲目是否有关联资源（对话中引用）"""
+    piece = request.args.get("piece", "")
+    matched = [r for r in RESOURCES if piece and (piece in r.get("piece", "") or r.get("piece", "") in piece)]
+    return jsonify({"has_resources": len(matched) > 0, "resources": matched})
 
 
 @app.route("/api/repertoire")

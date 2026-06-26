@@ -216,6 +216,10 @@ function typewriterAppend(text, assistant, animation, userMsg, intent) {
             if (intent === "lesson_plan" && userMsg) {
                 setTimeout(() => appendComicButton(bubble, userMsg), animation ? 1500 : 300);
             }
+            // 引用上传的教学资源
+            if (data.resources && data.resources.length > 0) {
+                setTimeout(() => appendResourceRef(bubble, data.resources), animation ? 1800 : 600);
+            }
         }
     }
     type();
@@ -1438,22 +1442,45 @@ function hideTyping() { const t = document.getElementById("typingMsg"); if (t) t
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ===== 教案库 =====
+// ===== 教学资源（Tomplay风格） =====
 async function loadLibrary() {
     const grid = document.getElementById("libGrid");
     try {
-        const res = await fetch("/api/lesson-plans");
-        const data = await res.json();
+        const [planRes, uploadRes] = await Promise.all([
+            fetch("/api/lesson-plans"), fetch("/api/resources")
+        ]);
+        const planData = await planRes.json();
+        const uploadData = await uploadRes.json();
+
+        // 渲染已上传资源
+        renderUploadedResources(uploadData.resources);
+
+        // 渲染曲目卡片（Tomplay风格）
         grid.innerHTML = "";
-        data.groups.forEach(group => {
+        const coverColors = ["#FF6B9D","#FFB84D","#5FC9A8","#4FC3F7","#4A3F8E"];
+        const coverIcons = ["⭐","🐑","🐯","🎉","🔔","🌉","🏰","🎹","🎼","🎵"];
+        planData.groups.forEach((group, gi) => {
             const gEl = document.createElement("div"); gEl.className = "lib-group";
             const title = document.createElement("div"); title.className = "lib-group-title";
             title.textContent = `${group.label}（${group.pieces.length}首）`;
             gEl.appendChild(title);
             const piecesEl = document.createElement("div"); piecesEl.className = "lib-pieces";
-            group.pieces.forEach(p => {
+            group.pieces.forEach((p, pi) => {
                 const card = document.createElement("div"); card.className = "lib-card";
-                card.innerHTML = `<div class="lib-card-name">${p.name}</div><div class="lib-card-meta">${p.key?`<span>${p.key}</span>`:""}${p.time_sig?`<span>${p.time_sig}</span>`:""}${p.difficulty?`<span>${p.difficulty}</span>`:""}</div>${p.tomplay?`<div class="lib-card-tomplay">Tomplay: ${p.tomplay}</div>`:""}`;
+                const color = coverColors[(gi+pi) % coverColors.length];
+                const icon = coverIcons[(gi+pi) % coverIcons.length];
+                // 检查是否有关联上传资源
+                const hasRes = uploadData.resources.some(r => p.name.includes(r.piece) || r.piece.includes(p.name));
+                card.innerHTML = `
+                    <div class="lib-card-cover" style="background:linear-gradient(135deg,${color},${color}99)">${icon}</div>
+                    <div class="lib-card-body">
+                        <div class="lib-card-name">${p.name}</div>
+                        <div class="lib-card-meta">${p.key||""} · ${p.time_sig||""} · ${p.difficulty||""}</div>
+                        <div class="lib-card-tags">
+                            <span class="lib-card-tag">AI教案</span>
+                            ${hasRes?'<span class="lib-card-tag has-resource">📎 已上传</span>':""}
+                        </div>
+                    </div>`;
                 card.addEventListener("click", () => {
                     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
                     document.querySelector('[data-view="chat"]').classList.add("active");
@@ -1469,10 +1496,90 @@ async function loadLibrary() {
     } catch(e) { grid.innerHTML = '<div class="lib-loading">加载失败，请刷新</div>'; }
 }
 
+function renderUploadedResources(resources) {
+    const section = document.getElementById("uploadedSection");
+    const list = document.getElementById("uploadedList");
+    if (!resources || resources.length === 0) { section.style.display = "none"; return; }
+    section.style.display = "block";
+    list.innerHTML = "";
+    resources.forEach(r => {
+        const item = document.createElement("div"); item.className = "uploaded-item";
+        const icon = r.type === "score" ? "🎼" : "📄";
+        item.innerHTML = `${icon} <a href="${r.url}" target="_blank">${r.filename}</a> <span style="color:#999;font-size:10px">(${r.piece||"未关联"})</span> <span class="del-btn" data-id="${r.id}">✕</span>`;
+        item.querySelector(".del-btn").addEventListener("click", () => deleteResource(r.id));
+        list.appendChild(item);
+    });
+}
+
+async function deleteResource(rid) {
+    await fetch(`/api/resources/${rid}`, { method: "DELETE" });
+    loadLibrary();
+}
+
+// ===== 上传功能 =====
+const uploadOverlay = document.getElementById("uploadOverlay");
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadClose = document.getElementById("uploadClose");
+const uploadSubmit = document.getElementById("uploadSubmit");
+const uploadResult = document.getElementById("uploadResult");
+
+uploadBtn.addEventListener("click", async () => {
+    uploadOverlay.classList.add("show");
+    // 加载曲目列表到下拉框
+    const res = await fetch("/api/lesson-plans");
+    const data = await res.json();
+    const sel = document.getElementById("uploadPiece");
+    sel.innerHTML = '<option value="">不关联曲目</option>';
+    data.groups.forEach(g => { g.pieces.forEach(p => {
+        const opt = document.createElement("option"); opt.value = p.name; opt.textContent = p.name;
+        sel.appendChild(opt);
+    });});
+});
+
+uploadClose.addEventListener("click", () => uploadOverlay.classList.remove("show"));
+uploadOverlay.addEventListener("click", (e) => { if (e.target === uploadOverlay) uploadOverlay.classList.remove("show"); });
+
+uploadSubmit.addEventListener("click", async () => {
+    const file = document.getElementById("uploadFile").files[0];
+    if (!file) { uploadResult.innerHTML = '<span style="color:#FF4444">请选择文件</span>'; return; }
+    uploadSubmit.disabled = true; uploadSubmit.textContent = "上传中...";
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", document.getElementById("uploadType").value);
+    formData.append("piece", document.getElementById("uploadPiece").value);
+    try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.success) {
+            uploadResult.innerHTML = '<span style="color:#5FC9A8">✓ 上传成功！</span>';
+            document.getElementById("uploadFile").value = "";
+            setTimeout(() => { uploadOverlay.classList.remove("show"); uploadResult.innerHTML = ""; loadLibrary(); }, 1000);
+        } else {
+            uploadResult.innerHTML = '<span style="color:#FF4444">上传失败</span>';
+        }
+    } catch(e) { uploadResult.innerHTML = '<span style="color:#FF4444">上传失败</span>'; }
+    uploadSubmit.disabled = false; uploadSubmit.textContent = "上传";
+});
+
+// 对话中引用上传资源
+function appendResourceRef(bubble, resources) {
+    if (!resources || resources.length === 0) return;
+    const ref = document.createElement("div"); ref.className = "resource-ref";
+    let html = "📎 已关联上传资源：<br>";
+    resources.forEach(r => {
+        const icon = r.type === "score" ? "🎼" : "📄";
+        html += `${icon} <a href="${r.url}" target="_blank">${r.filename}</a><br>`;
+    });
+    ref.innerHTML = html;
+    bubble.appendChild(ref);
+}
+
+// 搜索
 document.getElementById("libSearch").addEventListener("input", (e) => {
     const q = e.target.value.toLowerCase();
     document.querySelectorAll(".lib-card").forEach(card => {
-        card.style.display = card.querySelector(".lib-card-name").textContent.toLowerCase().includes(q) ? "" : "none";
+        const name = card.querySelector(".lib-card-name");
+        if (name) card.style.display = name.textContent.toLowerCase().includes(q) ? "" : "none";
     });
 });
 

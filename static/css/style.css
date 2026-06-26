@@ -226,9 +226,9 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
 .play-info { font-size:12px; color:var(--gray); }
 
 /* ===== 教案漫画 ===== */
-.comic-btn { margin-top:12px; padding:8px 16px; background:var(--primary); color:var(--white); border:none; border-radius:10px; font-size:13px; cursor:pointer; font-family:inherit; font-weight:600; transition:all 0.2s; }
-.comic-btn:hover { background:var(--pink); }
-.comic-btn:disabled { background:var(--light-gray); cursor:not-allowed; }
+.comic-btn { margin-top:12px; padding:8px 16px; background:linear-gradient(135deg,#4A3F8E,#6B5FB8); color:var(--white); border:none; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; font-weight:600; transition:all 0.2s; }
+.comic-btn:hover { background:linear-gradient(135deg,#5B4FA8,#7B6FC8); transform:translateY(-1px); }
+.comic-btn:disabled { background:var(--light-gray); cursor:not-allowed; transform:none; }
 .comic-strip { margin-top:14px; display:flex; flex-direction:column; gap:10px; }
 .comic-panel { border:2px solid var(--light-gray); border-radius:12px; overflow:hidden; animation:panelIn 0.4s ease; }
 @keyframes panelIn { from{opacity:0;transform:translateX(-15px);} to{opacity:1;transform:translateX(0);} }
@@ -264,6 +264,52 @@ body { font-family:"微软雅黑","PingFang SC","Helvetica Neue",sans-serif; bac
     .dash-card-wide { width:300px; }
     .dash-diagnosis { width:250px; }
 }
+
+/* ===== 上传弹窗 ===== */
+.upload-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:250; justify-content:center; align-items:center; }
+.upload-overlay.show { display:flex; }
+.upload-modal { background:var(--white); border-radius:16px; width:90%; max-width:400px; overflow:hidden; }
+.upload-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:var(--primary); color:var(--white); font-size:15px; font-weight:700; }
+.upload-close { background:rgba(255,255,255,0.2); border:none; color:var(--white); width:28px; height:28px; border-radius:6px; cursor:pointer; font-size:16px; }
+.upload-body { padding:18px; }
+.upload-field { margin-bottom:14px; }
+.upload-field label { display:block; font-size:13px; color:var(--gray); margin-bottom:5px; font-weight:600; }
+.upload-field select, .upload-field input[type=file] { width:100%; padding:8px 10px; border:2px solid var(--light-gray); border-radius:8px; font-size:14px; font-family:inherit; }
+.upload-field select:focus { border-color:var(--pink); outline:none; }
+.upload-submit { width:100%; padding:10px; background:linear-gradient(135deg,#4A3F8E,#6B5FB8); color:var(--white); border:none; border-radius:8px; font-size:14px; cursor:pointer; font-family:inherit; font-weight:600; }
+.upload-submit:hover { background:linear-gradient(135deg,#5B4FA8,#7B6FC8); }
+.upload-submit:disabled { background:var(--light-gray); cursor:not-allowed; }
+.upload-result { margin-top:10px; font-size:13px; text-align:center; }
+
+/* 上传按钮栏 */
+.lib-upload-bar { display:flex; gap:10px; margin-bottom:14px; align-items:center; }
+.upload-btn { padding:8px 16px; background:linear-gradient(135deg,#4A3F8E,#6B5FB8); color:var(--white); border:none; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap; }
+.upload-btn:hover { background:linear-gradient(135deg,#5B4FA8,#7B6FC8); }
+
+/* 已上传资源 */
+.uploaded-section { margin-bottom:16px; }
+.uploaded-title { font-size:14px; color:var(--primary); font-weight:700; margin-bottom:8px; }
+.uploaded-list { display:flex; flex-wrap:wrap; gap:8px; }
+.uploaded-item { display:flex; align-items:center; gap:6px; background:var(--white); border:1px solid var(--light-gray); border-radius:8px; padding:6px 10px; font-size:12px; }
+.uploaded-item a { color:var(--primary); text-decoration:none; }
+.uploaded-item a:hover { text-decoration:underline; }
+.uploaded-item .del-btn { color:#FF4444; cursor:pointer; font-size:14px; }
+
+/* Tomplay风格曲目卡片 */
+.lib-card { background:var(--white); border-radius:12px; padding:0; cursor:pointer; transition:all 0.25s; border:none; box-shadow:0 2px 10px rgba(0,0,0,0.08); overflow:hidden; }
+.lib-card:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(74,63,142,0.2); }
+.lib-card-cover { height:80px; display:flex; align-items:center; justify-content:center; font-size:32px; }
+.lib-card-body { padding:10px 12px; }
+.lib-card-name { font-size:14px; font-weight:700; color:var(--dark); margin-bottom:4px; }
+.lib-card-meta { font-size:11px; color:var(--gray); }
+.lib-card-tags { display:flex; gap:4px; margin-top:6px; }
+.lib-card-tag { font-size:10px; padding:2px 8px; border-radius:6px; background:var(--soft-purple); color:var(--primary); }
+.lib-card-tag.has-resource { background:#5FC9A8; color:var(--white); }
+
+/* 资源引用（对话中） */
+.resource-ref { margin-top:10px; padding:8px 12px; background:var(--soft-purple); border-radius:8px; font-size:12px; }
+.resource-ref a { color:var(--primary); font-weight:600; text-decoration:none; }
+.resource-ref a:hover { text-decoration:underline; }
 
 /* ===== 手机 (≤768px) ===== */
 @media (max-width:768px) {
