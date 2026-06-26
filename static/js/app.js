@@ -487,6 +487,9 @@ function drawScene(cv, scene, panelIdx) {
     const ctx = cv.getContext("2d");
     const W = cv.width, H = cv.height;
     let frame = 0;
+    // 漫画场景动画静音（避免与背景音乐冲突产生杂音）
+    const _playNote = playNote; const _playClap = playClap;
+    playNote = () => {}; playClap = () => {};
 
     // 共用：绘制小钢琴键盘
     function drawKeys(cx, cy, numWhite, highlightIdx, highlightColor, ledIdx) {
@@ -807,7 +810,8 @@ function drawScene(cv, scene, panelIdx) {
 
     const fn = anims[scene] || anims["piano_intro"];
     fn();
-    frame = 0; // reset for closure
+    // 恢复音效函数
+    playNote = _playNote; playClap = _playClap;
 }
 
 // SVG卡通人物（大图+动作）
@@ -1572,7 +1576,10 @@ function animMetronome(ctx, cv) {
 }
 function formatText(text) {
     return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:#4A3F8E;text-decoration:underline;">$1</a>')
+        .replace(/→\s+(\/static\/[^\s<]+)/g, '→ <a href="$1" target="_blank" style="color:#4A3F8E;text-decoration:underline;">点击查看</a>')
+        .replace(/\n/g, "<br>");
 }
 
 // ===== 打字指示器 =====

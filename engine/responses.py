@@ -92,10 +92,8 @@ LESSON_PLAN = {
 
 **课堂评价**：合奏准确率AI检测 · 装饰音干净度 · 三拍子韵律感
 
-📄 **乐谱**：/static/img/bach_minuet_score.png（G大调 3/4拍，来源IMSLP公开领域）
-
-🎬 **专业演奏视频**：https://www.youtube.com/results?search_query=bach+minuet+in+G+major+BWV+Anh+114+piano
-
+📄 **乐谱查看**：点击查看 → /static/img/bach_minuet_score.png
+🎬 **专业演奏视频**：B站搜索 → https://search.bilibili.com/all?keyword=巴赫小步舞曲Anh114钢琴
 🎵 **Tomplay功能搭配**：分手练习 → 慢速跟灯60BPM → 循环装饰音小节 → 合手节拍 → 原速合奏""",
 
     "两只老虎": """📋 **《两只老虎》教学教案**
