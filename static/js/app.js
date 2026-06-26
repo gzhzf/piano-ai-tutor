@@ -1011,6 +1011,152 @@ function appendAnimation(msgEl, type) {
     if (type === "黑键白键") return animBlackWhite(ctx, canvas);
     if (type === "高音谱号") return animTrebleClef(ctx, canvas);
     if (type === "节拍器") return animMetronome(ctx, canvas);
+    if (type === "dance_map") return animDanceMap(ctx, canvas);
+    if (type === "rhythm_game") return animRhythmGame(ctx, canvas);
+}
+
+// 动画：舞蹈路线图（小步舞曲3/4拍方形路线）
+function animDanceMap(ctx, cv) {
+    const W = cv.width, H = cv.height;
+    const cx = W/2, cy = H/2 + 10;
+    const size = 70; // 方形边长
+    let frame = 0;
+    const beats = ["强","弱","弱","强","弱","弱","强","弱","弱","强","弱","弱"];
+    const path = [
+        {x:cx-size,y:cy-size},{x:cx+size,y:cy-size},
+        {x:cx+size,y:cy+size},{x:cx-size,y:cy+size},{x:cx-size,y:cy-size}
+    ];
+
+    function draw() {
+        ctx.clearRect(0,0,W,H);
+        // 标题
+        ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 13px 微软雅黑"; ctx.textAlign = "center";
+        ctx.fillText("💃 小步舞曲舞蹈路线图 (3/4拍)", W/2, 14);
+
+        // 画方形路线
+        ctx.strokeStyle = "#E8E5F5"; ctx.lineWidth = 3;
+        ctx.beginPath();
+        path.forEach((p,i) => { if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); });
+        ctx.stroke();
+
+        // 画箭头方向
+        const arrows = [
+            {x:cx,y:cy-size,a:0}, {x:cx+size,y:cy,a:Math.PI/2},
+            {x:cx,y:cy+size,a:Math.PI}, {x:cx-size,y:cy,a:-Math.PI/2}
+        ];
+        arrows.forEach(ar => {
+            ctx.save(); ctx.translate(ar.x, ar.y); ctx.rotate(ar.a);
+            ctx.fillStyle = "#FF6B9D";
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-6,-4); ctx.lineTo(-6,4); ctx.fill();
+            ctx.restore();
+        });
+
+        // 当前位置（舞者）
+        const step = Math.floor(frame / 25) % 4;
+        const nextStep = (step + 1) % 4;
+        const progress = (frame % 25) / 25;
+        const px = path[step].x + (path[nextStep].x - path[step].x) * progress;
+        const py = path[step].y + (path[nextStep].y - path[step].y) * progress;
+
+        // 路径轨迹（已走过的路高亮）
+        ctx.strokeStyle = "#FF6B9D"; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let s = 0; s <= step; s++) {
+            if (s === 0) ctx.moveTo(path[s].x, path[s].y);
+            else ctx.lineTo(path[s].x, path[s].y);
+        }
+        ctx.lineTo(px, py);
+        ctx.stroke();
+
+        // 舞者
+        ctx.font = "20px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("💃", px, py + 6);
+
+        // 四角标注
+        const corners = [
+            {x:cx-size,y:cy-size,label:"起点",beat:"1-2小节"},
+            {x:cx+size,y:cy-size,label:"右转",beat:"3-4小节"},
+            {x:cx+size,y:cy+size,label:"旋转",beat:"5-6小节"},
+            {x:cx-size,y:cy+size,label:"回起点",beat:"7-8小节"}
+        ];
+        corners.forEach((c,i) => {
+            const isActive = i === step;
+            ctx.fillStyle = isActive ? "#FF6B9D" : "#6B688A";
+            ctx.font = isActive ? "bold 10px 微软雅黑" : "9px 微软雅黑";
+            ctx.fillText(c.label, c.x, c.y - 12);
+            ctx.fillStyle = isActive ? "#FFB84D" : "#AAAAAA";
+            ctx.font = "8px 微软雅黑";
+            ctx.fillText(c.beat, c.x, c.y - 24);
+        });
+
+        // 节拍指示
+        const beatIdx = Math.floor(frame / 8) % 3;
+        ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 11px 微软雅黑";
+        const beatLabels = ["强(跺脚)","弱(拍手)","弱(拍手)"];
+        ctx.fillText(beatLabels[beatIdx], W/2, H - 8);
+
+        // 每拍播放声音
+        if (frame % 8 === 0) {
+            playNote(beatIdx === 0 ? NOTE_FREQ["G4"] : NOTE_FREQ["D4"], 0.15, beatIdx === 0 ? 0.2 : 0.1);
+        }
+
+        frame++;
+        if (frame < 300) requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+// 动画：节奏游戏（3/4拍跺脚拍手）
+function animRhythmGame(ctx, cv) {
+    const W = cv.width, H = cv.height;
+    let frame = 0;
+    const actions = ["跺脚","拍手","拍手"];
+    const colors = ["#FF6B9D","#FFB84D","#FFB84D"];
+
+    function draw() {
+        ctx.clearRect(0,0,W,H);
+        ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 13px 微软雅黑"; ctx.textAlign = "center";
+        ctx.fillText("🎮 小步舞节奏挑战 (3/4拍)", W/2, 14);
+
+        const beat = Math.floor(frame / 20) % 3;
+        const beatProgress = (frame % 20) / 20;
+
+        // 三个动作圆
+        for (let i = 0; i < 3; i++) {
+            const x = W/2 - 60 + i * 60;
+            const y = H/2 - 5;
+            const isActive = i === beat;
+            const r = isActive ? 22 + Math.sin(beatProgress * Math.PI) * 4 : 16;
+
+            ctx.fillStyle = isActive ? colors[i] : "#E8E5F5";
+            ctx.beginPath(); ctx.arc(x, y, r, 0, 6.28); ctx.fill();
+
+            if (isActive) {
+                ctx.strokeStyle = colors[i]; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(x, y, r + 5, 0, 6.28); ctx.stroke();
+            }
+
+            ctx.fillStyle = isActive ? "#FFF" : "#999";
+            ctx.font = isActive ? "bold 12px 微软雅黑" : "10px 微软雅黑";
+            ctx.fillText(actions[i], x, y + 4);
+        }
+
+        // 拍号
+        ctx.fillStyle = "#4A3F8E"; ctx.font = "bold 16px 微软雅黑";
+        ctx.fillText("3/4", W/2, H - 20);
+        ctx.fillStyle = colors[beat]; ctx.font = "bold 11px 微软雅黑";
+        ctx.fillText(["第1拍(强)","第2拍(弱)","第3拍(弱)"][beat], W/2, H - 5);
+
+        // 声音
+        if (frame % 20 === 0) {
+            if (beat === 0) { playNote(NOTE_FREQ["G4"], 0.2, 0.2); playClap(0.25); }
+            else { playClap(0.12); }
+        }
+
+        frame++;
+        if (frame < 240) requestAnimationFrame(draw);
+    }
+    draw();
 }
 
 // 动画1：寻找中央C — 钢琴键盘高亮2黑键→左白键
@@ -2146,6 +2292,36 @@ async function loadDashboard() {
             {label:"流畅度", val:d.metrics.fluency/20},
             {label:"坚持性", val:4.2},
         ]);
+
+        // 前后测对比
+        const preRhythm = Math.max(50, d.metrics.rhythm - 15);
+        const prePitch = Math.max(50, d.metrics.pitch - 12);
+        const preFluency = Math.max(50, d.metrics.fluency - 18);
+        const preScore = Math.round(preRhythm*0.35 + prePitch*0.30 + d.metrics.completion*0.20 + preFluency*0.15);
+        const postScore = d.student.score;
+        const improvement = Math.round(postScore - preScore);
+        const gameInfo = document.getElementById("gameInfo");
+        if (gameInfo) {
+            gameInfo.innerHTML = `
+                <div style="display:flex;justify-content:center;gap:20px;margin-top:10px;">
+                    <div style="text-align:center;padding:10px 16px;background:#FFF0F5;border-radius:10px;">
+                        <div style="font-size:11px;color:#999;">前测（课前）</div>
+                        <div style="font-size:24px;font-weight:700;color:#FF6B9D;">${preScore}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;font-size:20px;color:#5FC9A8;">→</div>
+                    <div style="text-align:center;padding:10px 16px;background:#F0FCF8;border-radius:10px;">
+                        <div style="font-size:11px;color:#999;">后测（课后）</div>
+                        <div style="font-size:24px;font-weight:700;color:#5FC9A8;">${postScore}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;">
+                        <div style="text-align:center;padding:10px 16px;background:#F0F8FF;border-radius:10px;">
+                            <div style="font-size:11px;color:#999;">提升</div>
+                            <div style="font-size:24px;font-weight:700;color:#4FC3F7;">+${improvement}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
         // AI诊断
         const list = document.getElementById("diagnosisList");

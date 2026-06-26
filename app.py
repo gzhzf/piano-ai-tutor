@@ -188,6 +188,10 @@ def chat():
         animation = sub_intent  # "中央C" / "手型" / "节奏"
     elif intent == "rhythm_train":
         animation = "节奏"
+    elif intent == "teaching_assist" and sub_intent == "舞蹈路线图":
+        animation = "dance_map"
+    elif intent == "teaching_assist" and sub_intent == "节奏游戏":
+        animation = "rhythm_game"
 
     # 检查是否有上传的教学资源可引用
     related_resources = []
