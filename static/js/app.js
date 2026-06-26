@@ -1438,47 +1438,8 @@ function hideTyping() { const t = document.getElementById("typingMsg"); if (t) t
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ===== 教案库 =====
-async function loadLibrary() {
-    const grid = document.getElementById("libGrid");
-    try {
-        const res = await fetch("/api/lesson-plans");
-        const data = await res.json();
-        grid.innerHTML = "";
-        data.groups.forEach(group => {
-            const gEl = document.createElement("div"); gEl.className = "lib-group";
-            const title = document.createElement("div"); title.className = "lib-group-title";
-            title.textContent = `${group.label}（${group.pieces.length}首）`;
-            gEl.appendChild(title);
-            const piecesEl = document.createElement("div"); piecesEl.className = "lib-pieces";
-            group.pieces.forEach(p => {
-                const card = document.createElement("div"); card.className = "lib-card";
-                card.innerHTML = `<div class="lib-card-name">${p.name}</div><div class="lib-card-meta">${p.key?`<span>${p.key}</span>`:""}${p.time_sig?`<span>${p.time_sig}</span>`:""}${p.difficulty?`<span>${p.difficulty}</span>`:""}</div>${p.tomplay?`<div class="lib-card-tomplay">Tomplay: ${p.tomplay}</div>`:""}`;
-                card.addEventListener("click", () => {
-                    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-                    document.querySelector('[data-view="chat"]').classList.add("active");
-                    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-                    document.getElementById("view-chat").classList.add("active");
-                    chatInput.value = `帮我设计一节${p.name}教学课`;
-                    sendMessage();
-                });
-                piecesEl.appendChild(card);
-            });
-            gEl.appendChild(piecesEl); grid.appendChild(gEl);
-        });
-    } catch(e) { grid.innerHTML = '<div class="lib-loading">加载失败，请刷新</div>'; }
-}
-
-document.getElementById("libSearch").addEventListener("input", (e) => {
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll(".lib-card").forEach(card => {
-        card.style.display = card.querySelector(".lib-card-name").textContent.toLowerCase().includes(q) ? "" : "none";
-    });
-});
-
 // ===== 初始化 =====
 loadQuickQuestions();
-loadLibrary();
 initDashboard();
 initWelcomeAnim();
 
