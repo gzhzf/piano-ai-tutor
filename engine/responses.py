@@ -90,7 +90,13 @@ LESSON_PLAN = {
 
 **互动活动**：「小步舞节奏游戏」—3/4拍走步跺脚拍手，跟节拍器60→100BPM
 
-**课堂评价**：合奏准确率AI检测 · 装饰音干净度 · 三拍子韵律感""",
+**课堂评价**：合奏准确率AI检测 · 装饰音干净度 · 三拍子韵律感
+
+📄 **乐谱**：/static/img/bach_minuet_score.png（G大调 3/4拍，来源IMSLP公开领域）
+
+🎬 **专业演奏视频**：https://www.youtube.com/results?search_query=bach+minuet+in+G+major+BWV+Anh+114+piano
+
+🎵 **Tomplay功能搭配**：分手练习 → 慢速跟灯60BPM → 循环装饰音小节 → 合手节拍 → 原速合奏""",
 
     "两只老虎": """📋 **《两只老虎》教学教案**
 
