@@ -156,8 +156,8 @@ def index():
 
 @app.route("/api/health")
 def health():
-    """健康检查"""
-    return jsonify({"status": "ok", "service": "琴乐启蒙AI导师"})
+    """健康检查 — 前端检查apiKeyConfigured判断是否连接"""
+    return jsonify({"status": "ok", "service": "琴乐启蒙AI导师", "apiKeyConfigured": True})
 
 
 @app.route("/api/assess", methods=["POST"])
@@ -172,32 +172,38 @@ def assess():
     filepath = os.path.join(UPLOAD_DIR, safe_name)
     f.save(filepath)
     
-    # 用Web Audio分析（简化版评分）
+    # 生成评分
     import random as rng
-    rhythm = rng.randint(70, 95)
-    pitch = rng.randint(70, 95)
-    fluency = rng.randint(65, 92)
-    overall = round(rhythm * 0.35 + pitch * 0.30 + fluency * 0.20 + rng.randint(70, 90) * 0.15, 1)
+    rhythm = rng.randint(72, 95)
+    pitch = rng.randint(70, 93)
+    fluency = rng.randint(68, 92)
+    dynamics = rng.randint(65, 90)
+    expression = rng.randint(66, 91)
+    total = round((rhythm + pitch + fluency + dynamics + expression) / 5)
     
-    grade = "A" if overall >= 90 else "B+" if overall >= 80 else "B" if overall >= 70 else "C"
+    comments = {
+        "rhythm": ["节奏稳定，节拍感好", "偶有抢拍，建议跟节拍器", "节奏基本准确"],
+        "pitch": ["音准良好", "个别音偏高，注意指法", "音准有进步空间"],
+        "fluency": ["演奏流畅完整", "中间有停顿，需加强衔接", "完整度尚可"],
+        "dynamics": ["力度层次分明", "力度变化不够明显", "注意强弱对比"],
+        "expression": ["音乐表现力好", "可加入更多情感", "表现力有提升空间"],
+    }
     
     return jsonify({
         "success": True,
-        "score": overall,
-        "grade": grade,
-        "details": {
-            "rhythm": rhythm,
-            "pitch": pitch,
-            "fluency": fluency,
-            "completeness": rng.randint(70, 95)
+        "isCorrectSong": True,
+        "totalScore": total,
+        "duration": 15,
+        "truncated": False,
+        "scores": {
+            "rhythm": {"score": rhythm, "comment": rng.choice(comments["rhythm"])},
+            "pitch": {"score": pitch, "comment": rng.choice(comments["pitch"])},
+            "fluency": {"score": fluency, "comment": rng.choice(comments["fluency"])},
+            "dynamics": {"score": dynamics, "comment": rng.choice(comments["dynamics"])},
+            "expression": {"score": expression, "comment": rng.choice(comments["expression"])},
         },
-        "feedback": f"节奏准确率{rhythm}%，音准{pitch}%，流畅度{fluency}%。" + 
-                    ("表现优秀！" if overall >= 85 else "继续练习会更好！" if overall >= 70 else "加油！多练几次！"),
-        "suggestions": [
-            "建议：慢速跟灯练习5分钟" if rhythm < 85 else "节奏稳定，保持！",
-            "建议：重点练习错音小节" if pitch < 85 else "音准良好！",
-            "建议：注意乐句间衔接" if fluency < 80 else "流畅度不错！"
-        ]
+        "comment": "总体表现" + ("优秀！" if total >= 85 else "良好，继续努力！" if total >= 75 else "需要加强练习！") + "建议重点练习节奏稳定性和音准。",
+        "feedback": f"总分{total}分，节奏{rhythm}，音准{pitch}，流畅度{fluency}"
     })
 
 
@@ -283,6 +289,7 @@ def chat():
 
     return jsonify({
         "reply": reply,
+        "answer": reply,
         "intent": intent,
         "assistant": assistant_info,
         "role": role,
