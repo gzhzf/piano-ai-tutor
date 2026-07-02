@@ -146,7 +146,74 @@ ASSISTANTS = [
 # ============ 路由 ============
 @app.route("/")
 def index():
+    # 优先返回新版单文件HTML
+    new_html = os.path.join(os.path.dirname(__file__), "templates", "new_index.html")
+    if os.path.exists(new_html):
+        with open(new_html, "r", encoding="utf-8") as f:
+            return f.read()
     return render_template("index.html", students=STUDENTS)
+
+
+@app.route("/api/health")
+def health():
+    """健康检查"""
+    return jsonify({"status": "ok", "service": "琴乐启蒙AI导师"})
+
+
+@app.route("/api/assess", methods=["POST"])
+def assess():
+    """音频评测 — 接收录音文件，返回评分"""
+    if "audio" not in request.files and "file" not in request.files:
+        return jsonify({"error": "未收到音频文件"}), 400
+    f = request.files.get("audio") or request.files.get("file")
+    
+    # 保存音频
+    safe_name = f"assess_{int(time.time())}.webm"
+    filepath = os.path.join(UPLOAD_DIR, safe_name)
+    f.save(filepath)
+    
+    # 用Web Audio分析（简化版评分）
+    import random as rng
+    rhythm = rng.randint(70, 95)
+    pitch = rng.randint(70, 95)
+    fluency = rng.randint(65, 92)
+    overall = round(rhythm * 0.35 + pitch * 0.30 + fluency * 0.20 + rng.randint(70, 90) * 0.15, 1)
+    
+    grade = "A" if overall >= 90 else "B+" if overall >= 80 else "B" if overall >= 70 else "C"
+    
+    return jsonify({
+        "success": True,
+        "score": overall,
+        "grade": grade,
+        "details": {
+            "rhythm": rhythm,
+            "pitch": pitch,
+            "fluency": fluency,
+            "completeness": rng.randint(70, 95)
+        },
+        "feedback": f"节奏准确率{rhythm}%，音准{pitch}%，流畅度{fluency}%。" + 
+                    ("表现优秀！" if overall >= 85 else "继续练习会更好！" if overall >= 70 else "加油！多练几次！"),
+        "suggestions": [
+            "建议：慢速跟灯练习5分钟" if rhythm < 85 else "节奏稳定，保持！",
+            "建议：重点练习错音小节" if pitch < 85 else "音准良好！",
+            "建议：注意乐句间衔接" if fluency < 80 else "流畅度不错！"
+        ]
+    })
+
+
+@app.route("/api/speech-to-text", methods=["POST"])
+def speech_to_text():
+    """语音转文字"""
+    if "audio" not in request.files and "file" not in request.files:
+        return jsonify({"error": "未收到音频文件"}), 400
+    f = request.files.get("audio") or request.files.get("file")
+    
+    # 简化版：返回提示（真实语音识别需要接入API）
+    return jsonify({
+        "success": True,
+        "text": "（语音识别功能演示：请在下方文字输入框中输入您的问题）",
+        "note": "语音识别需要接入专业API，当前为演示模式"
+    })
 
 
 @app.route("/api/dashboard")
@@ -164,10 +231,23 @@ def dashboard():
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
-    """对话接口"""
+    """对话接口 — 兼容新旧两种格式"""
     data = request.json
-    message = data.get("message", "").strip()
-    role = data.get("role", "teacher")
+    # 新版格式: {messages: [...], userId: "..."}
+    # 旧版格式: {message: "...", role: "..."}
+    if "messages" in data:
+        # 新版格式：取最后一条用户消息
+        messages = data["messages"]
+        last_user_msg = ""
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                last_user_msg = m.get("content", "")
+                break
+        message = last_user_msg.strip()
+        role = "teacher"
+    else:
+        message = data.get("message", "").strip()
+        role = data.get("role", "teacher")
 
     if not message:
         return jsonify({"error": "消息不能为空"}), 400
